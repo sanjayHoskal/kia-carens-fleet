@@ -17,7 +17,8 @@ import {
   Clock,
   ArrowRightLeft,
   CreditCard,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Expense, ExpenseCategory, PartnerUser } from '@/lib/types';
@@ -26,6 +27,7 @@ import { createWorker } from 'tesseract.js';
 export default function ExpensesPage() {
   const [currentUser, setCurrentUser] = useState<PartnerUser>('Sanjay P');
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // OCR Scanner State
   const [isScanning, setIsScanning] = useState(false);
@@ -54,10 +56,16 @@ export default function ExpensesPage() {
     setCurrentUser(user);
     setExpenses(store.getExpenses());
     setFormData((prev) => ({ ...prev, paidBy: user }));
+
+    // Async live cloud database fetch
+    refreshExpenses();
   }, []);
 
-  const refreshExpenses = () => {
-    setExpenses(store.getExpenses());
+  const refreshExpenses = async () => {
+    setIsRefreshing(true);
+    const live = await store.fetchExpensesAsync();
+    setExpenses(live);
+    setIsRefreshing(false);
   };
 
   // Run Tesseract.js Client-Side OCR on File Selection
@@ -208,7 +216,14 @@ export default function ExpensesPage() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* File input trigger for OCR */}
+          <button
+            onClick={refreshExpenses}
+            title="Sync live cloud data"
+            className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-xs"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
+          </button>
+
           <label className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-all shadow-lg shadow-amber-600/30 flex items-center space-x-2 cursor-pointer">
             <Scan className="w-4 h-4" />
             <span>Scan Receipt with OCR</span>

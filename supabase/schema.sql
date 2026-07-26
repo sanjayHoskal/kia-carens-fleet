@@ -60,6 +60,12 @@ CREATE TABLE IF NOT EXISTS public.expenses (
   bill_photo_url TEXT,
   ocr_extracted_data JSONB,
   logged_by TEXT NOT NULL,
+  is_split BOOLEAN DEFAULT true,
+  split_amount DECIMAL,
+  settled_status TEXT DEFAULT 'Pending',
+  settlement_mode TEXT,
+  settled_at TIMESTAMPTZ,
+  settled_by TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -79,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RLS Policies (Allow authenticated partners full access)
+-- RLS Policies (Allow full read/write for fleet app partners)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.loan_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
@@ -87,9 +93,9 @@ ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_wallet ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Partners can read all profiles" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Partners can manage loan" ON public.loan_settings FOR ALL USING (true);
-CREATE POLICY "Partners can manage bookings" ON public.bookings FOR ALL USING (true);
-CREATE POLICY "Partners can manage expenses" ON public.expenses FOR ALL USING (true);
-CREATE POLICY "Partners can manage maintenance wallet" ON public.maintenance_wallet FOR ALL USING (true);
-CREATE POLICY "Partners can manage audit logs" ON public.audit_logs FOR ALL USING (true);
+CREATE POLICY "Allow public read profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Allow public all loan" ON public.loan_settings FOR ALL USING (true);
+CREATE POLICY "Allow public all bookings" ON public.bookings FOR ALL USING (true);
+CREATE POLICY "Allow public all expenses" ON public.expenses FOR ALL USING (true);
+CREATE POLICY "Allow public all maintenance wallet" ON public.maintenance_wallet FOR ALL USING (true);
+CREATE POLICY "Allow public all audit logs" ON public.audit_logs FOR ALL USING (true);
