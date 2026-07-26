@@ -1,4 +1,4 @@
-# 🚗 Kia Carens (KA09MK6792) Partnership & Fleet Management Web App
+# 🚗 Kia Carens Partnership & Fleet Management Web App
 
 A high-performance, mobile-first web application built for **Sanjay P** and **Sachin** to manage their shared **Kia Carens (KA09MK6792)** rental fleet, loan amortization tracker, ₹5,000 maintenance fund retention, OCR receipt scanner, pre/post trip photo checklists, and P&L financial analytics.
 
