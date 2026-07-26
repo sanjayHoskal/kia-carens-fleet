@@ -1,5 +1,5 @@
 import { Booking, Expense, AuditLog, LoanState, PartnerUser } from './types';
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase } from './supabase';
 
 const INITIAL_LOAN_STATE: LoanState = {
   vehicleNumber: 'KA09MK6792',
@@ -25,11 +25,11 @@ const INITIAL_AUDIT_LOGS: AuditLog[] = [
 ];
 
 const STORAGE_KEYS = {
-  CURRENT_USER: 'kc_current_user_v5',
-  LOAN: 'kc_loan_state_v5',
-  BOOKINGS: 'kc_bookings_v5',
-  EXPENSES: 'kc_expenses_v5',
-  AUDIT: 'kc_audit_logs_v5',
+  CURRENT_USER: 'kc_current_user_v6',
+  LOAN: 'kc_loan_state_v6',
+  BOOKINGS: 'kc_bookings_v6',
+  EXPENSES: 'kc_expenses_v6',
+  AUDIT: 'kc_audit_logs_v6',
   THEME: 'kc_theme_v1',
 };
 
@@ -62,27 +62,25 @@ export const store = {
   },
 
   async fetchLoanStateAsync(): Promise<LoanState> {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase.from('loan_settings').select('*').limit(1).single();
-        if (data && !error) {
-          const loanState: LoanState = {
-            vehicleNumber: data.vehicle_number || 'KA09MK6792',
-            vehicleModel: data.vehicle_model || 'Kia Carens',
-            initialPrincipal: Number(data.initial_principal) || 1181000,
-            currentPrincipal: Number(data.current_principal) || 1181000,
-            tenureMonths: Number(data.tenure_months) || 84,
-            monthlyEmi: Number(data.monthly_emi) || 21000,
-            monthlyMaintenanceTarget: Number(data.monthly_maintenance_target) || 5000,
-          };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEYS.LOAN, JSON.stringify(loanState));
-          }
-          return loanState;
+    try {
+      const { data, error } = await supabase.from('loan_settings').select('*').limit(1).single();
+      if (data && !error) {
+        const loanState: LoanState = {
+          vehicleNumber: data.vehicle_number || 'KA09MK6792',
+          vehicleModel: data.vehicle_model || 'Kia Carens',
+          initialPrincipal: Number(data.initial_principal) || 1181000,
+          currentPrincipal: Number(data.current_principal) || 1181000,
+          tenureMonths: Number(data.tenure_months) || 84,
+          monthlyEmi: Number(data.monthly_emi) || 21000,
+          monthlyMaintenanceTarget: Number(data.monthly_maintenance_target) || 5000,
+        };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.LOAN, JSON.stringify(loanState));
         }
-      } catch (err) {
-        console.error('Supabase fetch loan error:', err);
+        return loanState;
       }
+    } catch (err) {
+      console.error('Supabase fetch loan error:', err);
     }
     return this.getLoanState();
   },
@@ -95,37 +93,35 @@ export const store = {
   },
 
   async fetchBookingsAsync(): Promise<Booking[]> {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
-        if (data && !error) {
-          const formatted: Booking[] = data.map((b: any) => ({
-            id: b.id,
-            guestName: b.guest_name,
-            guestPhone: b.guest_phone,
-            guestAadhaar: b.guest_aadhaar,
-            guestDl: b.guest_dl,
-            source: b.source,
-            startDate: b.start_date,
-            endDate: b.end_date,
-            dailyRate: Number(b.daily_rate),
-            totalAmount: Number(b.total_amount),
-            status: b.status,
-            signatureUrl: b.signature_url,
-            signedAgreementUrl: b.signed_agreement_url,
-            preInspection: b.pre_inspection,
-            postInspection: b.post_inspection,
-            createdBy: b.created_by,
-            createdAt: b.created_at,
-          }));
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(formatted));
-          }
-          return formatted;
+    try {
+      const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+      if (data && !error) {
+        const formatted: Booking[] = data.map((b: any) => ({
+          id: b.id,
+          guestName: b.guest_name,
+          guestPhone: b.guest_phone,
+          guestAadhaar: b.guest_aadhaar,
+          guestDl: b.guest_dl,
+          source: b.source,
+          startDate: b.start_date,
+          endDate: b.end_date,
+          dailyRate: Number(b.daily_rate),
+          totalAmount: Number(b.total_amount),
+          status: b.status,
+          signatureUrl: b.signature_url,
+          signedAgreementUrl: b.signed_agreement_url,
+          preInspection: b.pre_inspection,
+          postInspection: b.post_inspection,
+          createdBy: b.created_by,
+          createdAt: b.created_at,
+        }));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(formatted));
         }
-      } catch (err) {
-        console.error('Supabase fetch bookings error:', err);
+        return formatted;
       }
+    } catch (err) {
+      console.error('Supabase fetch bookings error:', err);
     }
     return this.getBookings();
   },
@@ -142,23 +138,23 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updated));
     }
 
-    if (isSupabaseConfigured && supabase) {
-      supabase.from('bookings').insert([{
-        guest_name: booking.guestName,
-        guest_phone: booking.guestPhone,
-        guest_aadhaar: booking.guestAadhaar,
-        guest_dl: booking.guestDl,
-        source: booking.source,
-        start_date: booking.startDate,
-        end_date: booking.endDate,
-        daily_rate: booking.dailyRate,
-        total_amount: booking.totalAmount,
-        status: booking.status,
-        created_by: booking.createdBy,
-      }]).then(({ error }) => {
-        if (error) console.error('Supabase insert booking error:', error);
-      });
-    }
+    supabase.from('bookings').insert([{
+      id: newBooking.id,
+      guest_name: booking.guestName,
+      guest_phone: booking.guestPhone,
+      guest_aadhaar: booking.guestAadhaar,
+      guest_dl: booking.guestDl,
+      source: booking.source,
+      start_date: booking.startDate,
+      end_date: booking.endDate,
+      daily_rate: booking.dailyRate,
+      total_amount: booking.totalAmount,
+      status: booking.status,
+      created_by: booking.createdBy,
+      created_at: newBooking.createdAt,
+    }]).then(({ error }) => {
+      if (error) console.error('Supabase insert booking error:', error);
+    });
 
     this.addAuditLog('Created Booking', `Created ${booking.source} booking for ${booking.guestName} (₹${booking.totalAmount.toLocaleString('en-IN')})`);
     return newBooking;
@@ -178,18 +174,16 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updatedList));
     }
 
-    if (isSupabaseConfigured && supabase) {
-      const sbUpdates: any = {};
-      if (updates.status) sbUpdates.status = updates.status;
-      if (updates.signatureUrl) sbUpdates.signature_url = updates.signatureUrl;
-      if (updates.signedAgreementUrl) sbUpdates.signed_agreement_url = updates.signedAgreementUrl;
-      if (updates.preInspection) sbUpdates.pre_inspection = updates.preInspection;
-      if (updates.postInspection) sbUpdates.post_inspection = updates.postInspection;
+    const sbUpdates: any = {};
+    if (updates.status) sbUpdates.status = updates.status;
+    if (updates.signatureUrl) sbUpdates.signature_url = updates.signatureUrl;
+    if (updates.signedAgreementUrl) sbUpdates.signed_agreement_url = updates.signedAgreementUrl;
+    if (updates.preInspection) sbUpdates.pre_inspection = updates.preInspection;
+    if (updates.postInspection) sbUpdates.post_inspection = updates.postInspection;
 
-      supabase.from('bookings').update(sbUpdates).eq('id', id).then(({ error }) => {
-        if (error) console.error('Supabase update booking error:', error);
-      });
-    }
+    supabase.from('bookings').update(sbUpdates).eq('id', id).then(({ error }) => {
+      if (error) console.error('Supabase update booking error:', error);
+    });
 
     return updatedItem;
   },
@@ -202,34 +196,32 @@ export const store = {
   },
 
   async fetchExpensesAsync(): Promise<Expense[]> {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase.from('expenses').select('*').order('created_at', { ascending: false });
-        if (data && !error) {
-          const formatted: Expense[] = data.map((e: any) => ({
-            id: e.id,
-            category: e.category,
-            amount: Number(e.amount),
-            description: e.description,
-            billPhotoUrl: e.bill_photo_url,
-            ocrExtractedData: e.ocr_extracted_data,
-            loggedBy: e.logged_by,
-            isSplit: e.is_split,
-            splitAmount: e.split_amount ? Number(e.split_amount) : undefined,
-            settledStatus: e.settled_status || 'Pending',
-            settlementMode: e.settlement_mode,
-            settledAt: e.settled_at,
-            settledBy: e.settled_by,
-            createdAt: e.created_at,
-          }));
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(formatted));
-          }
-          return formatted;
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('created_at', { ascending: false });
+      if (data && !error) {
+        const formatted: Expense[] = data.map((e: any) => ({
+          id: e.id,
+          category: e.category,
+          amount: Number(e.amount),
+          description: e.description,
+          billPhotoUrl: e.bill_photo_url,
+          ocrExtractedData: e.ocr_extracted_data,
+          loggedBy: e.logged_by,
+          isSplit: e.is_split,
+          splitAmount: e.split_amount ? Number(e.split_amount) : undefined,
+          settledStatus: e.settled_status || 'Pending',
+          settlementMode: e.settlement_mode,
+          settledAt: e.settled_at,
+          settledBy: e.settled_by,
+          createdAt: e.created_at,
+        }));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(formatted));
         }
-      } catch (err) {
-        console.error('Supabase fetch expenses error:', err);
+        return formatted;
       }
+    } catch (err) {
+      console.error('Supabase fetch expenses error:', err);
     }
     return this.getExpenses();
   },
@@ -246,21 +238,21 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(updated));
     }
 
-    if (isSupabaseConfigured && supabase) {
-      supabase.from('expenses').insert([{
-        category: expense.category,
-        amount: expense.amount,
-        description: expense.description,
-        bill_photo_url: expense.billPhotoUrl,
-        ocr_extracted_data: expense.ocrExtractedData,
-        logged_by: expense.loggedBy,
-        is_split: expense.isSplit,
-        split_amount: expense.splitAmount,
-        settled_status: expense.settledStatus || 'Pending',
-      }]).then(({ error }) => {
-        if (error) console.error('Supabase insert expense error:', error);
-      });
-    }
+    supabase.from('expenses').insert([{
+      id: newExpense.id,
+      category: expense.category,
+      amount: expense.amount,
+      description: expense.description,
+      bill_photo_url: expense.billPhotoUrl,
+      ocr_extracted_data: expense.ocrExtractedData,
+      logged_by: expense.loggedBy,
+      is_split: expense.isSplit,
+      split_amount: expense.splitAmount,
+      settled_status: expense.settledStatus || 'Pending',
+      created_at: newExpense.createdAt,
+    }]).then(({ error }) => {
+      if (error) console.error('Supabase insert expense error:', error);
+    });
 
     const splitNote = expense.isSplit 
       ? ` (50:50 Split: ₹${expense.splitAmount?.toLocaleString('en-IN')} pending from partner)`
@@ -289,16 +281,14 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(updatedList));
     }
 
-    if (isSupabaseConfigured && supabase) {
-      supabase.from('expenses').update({
-        settled_status: 'Settled',
-        settlement_mode: settlementMode,
-        settled_at: new Date().toISOString(),
-        settled_by: partner,
-      }).eq('id', expenseId).then(({ error }) => {
-        if (error) console.error('Supabase settle expense error:', error);
-      });
-    }
+    supabase.from('expenses').update({
+      settled_status: 'Settled',
+      settlement_mode: settlementMode,
+      settled_at: new Date().toISOString(),
+      settled_by: partner,
+    }).eq('id', expenseId).then(({ error }) => {
+      if (error) console.error('Supabase settle expense error:', error);
+    });
 
     if (updatedItem) {
       this.addAuditLog('Settled Expense Split', `${partner} settled split amount of ₹${(updatedItem as Expense).splitAmount?.toLocaleString('en-IN')} via ${settlementMode} for expense ${(updatedItem as Expense).description}`);
@@ -314,25 +304,23 @@ export const store = {
   },
 
   async fetchAuditLogsAsync(): Promise<AuditLog[]> {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false });
-        if (data && !error) {
-          const formatted: AuditLog[] = data.map((l: any) => ({
-            id: l.id,
-            userName: l.user_name,
-            action: l.action,
-            details: typeof l.details === 'string' ? l.details : JSON.stringify(l.details),
-            createdAt: l.created_at,
-          }));
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEYS.AUDIT, JSON.stringify(formatted));
-          }
-          return formatted;
+    try {
+      const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false });
+      if (data && !error) {
+        const formatted: AuditLog[] = data.map((l: any) => ({
+          id: l.id,
+          userName: l.user_name,
+          action: l.action,
+          details: typeof l.details === 'string' ? l.details : JSON.stringify(l.details),
+          createdAt: l.created_at,
+        }));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.AUDIT, JSON.stringify(formatted));
         }
-      } catch (err) {
-        console.error('Supabase fetch audit error:', err);
+        return formatted;
       }
+    } catch (err) {
+      console.error('Supabase fetch audit error:', err);
     }
     return this.getAuditLogs();
   },
@@ -352,15 +340,15 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.AUDIT, JSON.stringify(updated));
     }
 
-    if (isSupabaseConfigured && supabase) {
-      supabase.from('audit_logs').insert([{
-        user_name: user,
-        action,
-        details,
-      }]).then(({ error }) => {
-        if (error) console.error('Supabase insert audit log error:', error);
-      });
-    }
+    supabase.from('audit_logs').insert([{
+      id: newLog.id,
+      user_name: user,
+      action,
+      details,
+      created_at: newLog.createdAt,
+    }]).then(({ error }) => {
+      if (error) console.error('Supabase insert audit log error:', error);
+    });
 
     return newLog;
   },
@@ -391,14 +379,12 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.AUDIT, JSON.stringify([newLog]));
     }
 
-    if (isSupabaseConfigured && supabase) {
-      supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      supabase.from('loan_settings').update({
-        initial_principal: customInitialPrincipal,
-        current_principal: customInitialPrincipal,
-        monthly_emi: customEmi,
-      }).eq('id', '00000000-0000-0000-0000-000000000001');
-    }
+    supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    supabase.from('loan_settings').update({
+      initial_principal: customInitialPrincipal,
+      current_principal: customInitialPrincipal,
+      monthly_emi: customEmi,
+    }).eq('id', '00000000-0000-0000-0000-000000000001');
   }
 };

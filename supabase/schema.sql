@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. Profiles Table (Sanjay P & Sachin)
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id TEXT PRIMARY KEY,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
   role TEXT NOT NULL DEFAULT 'partner',
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 -- 2. Loan Settings & Amortization
 CREATE TABLE IF NOT EXISTS public.loan_settings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
   vehicle_number TEXT NOT NULL DEFAULT 'KA09MK6792',
   vehicle_model TEXT NOT NULL DEFAULT 'Kia Carens',
   initial_principal DECIMAL NOT NULL DEFAULT 1181000.00,
@@ -32,7 +32,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 3. Bookings Table
 CREATE TABLE IF NOT EXISTS public.bookings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
   guest_name TEXT NOT NULL,
   guest_phone TEXT NOT NULL,
   guest_aadhaar TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
 
 -- 4. Expenses & Operational Ledger Table
 CREATE TABLE IF NOT EXISTS public.expenses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
   category TEXT NOT NULL CHECK (category IN ('Fuel', 'Garage Servicing', 'Tyre Replacement', 'Insurance', 'Other')),
   amount DECIMAL NOT NULL,
   description TEXT NOT NULL,
@@ -71,31 +71,24 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 
 -- 5. Maintenance Wallet Balance Table
 CREATE TABLE IF NOT EXISTS public.maintenance_wallet (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
   balance DECIMAL NOT NULL DEFAULT 5000.00,
   last_updated TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 6. Audit Logs Table
 CREATE TABLE IF NOT EXISTS public.audit_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
   user_name TEXT NOT NULL,
   action TEXT NOT NULL,
   details JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RLS Policies (Allow full read/write for fleet app partners)
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.loan_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.maintenance_wallet ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read profiles" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Allow public all loan" ON public.loan_settings FOR ALL USING (true);
-CREATE POLICY "Allow public all bookings" ON public.bookings FOR ALL USING (true);
-CREATE POLICY "Allow public all expenses" ON public.expenses FOR ALL USING (true);
-CREATE POLICY "Allow public all maintenance wallet" ON public.maintenance_wallet FOR ALL USING (true);
-CREATE POLICY "Allow public all audit logs" ON public.audit_logs FOR ALL USING (true);
+-- Disable RLS or set completely open permissive policies for shared partnership ledger
+ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loan_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_wallet DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
