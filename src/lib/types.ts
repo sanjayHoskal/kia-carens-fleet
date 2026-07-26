@@ -75,6 +75,13 @@ export interface Expense {
     confidence?: number;
   };
   loggedBy: PartnerUser;
+  // Expense 50:50 Split & Partner Settlement Fields
+  isSplit?: boolean;
+  splitAmount?: number;
+  settledStatus?: 'Pending' | 'Settled';
+  settlementMode?: string; // 'UPI', 'Cash', 'Bank Transfer', 'Offset against Booking Revenue'
+  settledAt?: string;
+  settledBy?: PartnerUser;
   createdAt: string;
 }
 

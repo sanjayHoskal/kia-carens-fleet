@@ -11,10 +11,11 @@ import {
   TrendingUp, 
   ShieldCheck, 
   UserCheck, 
-  Lock, 
   CheckCircle2, 
   Menu, 
-  X 
+  X,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { PartnerUser } from '@/lib/types';
@@ -23,9 +24,14 @@ export default function Navbar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<PartnerUser>('Sanjay P');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     setCurrentUser(store.getCurrentUser());
+    const savedTheme = store.getTheme();
+    setTheme(savedTheme);
+    document.documentElement.classList.remove('dark', 'light');
+    document.documentElement.classList.add(savedTheme);
   }, []);
 
   const handleSwitchUser = (user: PartnerUser) => {
@@ -33,6 +39,14 @@ export default function Navbar() {
     setCurrentUser(user);
     store.addAuditLog('Switched Active Session', `Session switched to ${user}`);
     window.location.reload();
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    store.setTheme(nextTheme);
+    document.documentElement.classList.remove('dark', 'light');
+    document.documentElement.classList.add(nextTheme);
   };
 
   const navLinks = [
@@ -88,12 +102,22 @@ export default function Navbar() {
             })}
           </nav>
 
-          {/* Partner User Switcher & Zero Cost Tag */}
+          {/* Partner User Switcher, Theme Toggle & Zero Cost Tag */}
           <div className="hidden sm:flex items-center space-x-3">
+            
+            {/* Theme Toggle Switch */}
+            <button
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all flex items-center justify-center"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-500" />}
+            </button>
+
             {/* ₹0 Free Badge */}
             <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/50 text-[11px] font-medium text-emerald-400">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Hosting Cost: ₹0</span>
+              <span>Hosting: ₹0</span>
             </div>
 
             {/* User Toggle */}
@@ -125,6 +149,12 @@ export default function Navbar() {
 
           {/* Mobile menu trigger */}
           <div className="flex md:hidden items-center space-x-2">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-500" />}
+            </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white"

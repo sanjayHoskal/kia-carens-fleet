@@ -14,7 +14,9 @@ import {
   Calendar, 
   ArrowRight, 
   Users,
-  RotateCcw
+  RotateCcw,
+  ShieldAlert,
+  X
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, Expense, LoanState, PartnerUser } from '@/lib/types';
@@ -27,6 +29,11 @@ export default function Dashboard() {
 
   // Simulator state for revenue
   const [simulatedRevenue, setSimulatedRevenue] = useState<number | null>(null);
+
+  // Factory Reset Modal State
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetLoanAmount, setResetLoanAmount] = useState(1181000);
+  const [resetEmiAmount, setResetEmiAmount] = useState(21000);
 
   useEffect(() => {
     setCurrentUser(store.getCurrentUser());
@@ -52,21 +59,26 @@ export default function Dashboard() {
   const deficit = Math.max(0, totalRequiredTarget - displayRevenue);
   const partnerSplit = Math.ceil(deficit / 2);
 
-  // Amortization metrics (Fresh start: ₹11,81,000 principal)
+  // Amortization metrics
   const clearedPrincipal = loan.initialPrincipal - loan.currentPrincipal;
   const progressPercent = Math.min(100, Math.round((clearedPrincipal / loan.initialPrincipal) * 100));
-  const remainingMonths = Math.ceil(loan.currentPrincipal / loan.monthlyEmi);
+  const remainingMonths = Math.ceil(loan.currentPrincipal / (loan.monthlyEmi || 1));
 
   // Maintenance wallet balance
   const maintenanceWalletBalance = Math.min(maintenanceTarget, displayRevenue);
 
   const activeBooking = bookings.find((b) => b.status === 'Active');
 
-  const handleResetData = () => {
-    if (confirm('Reset entire ledger to fresh ₹11,81,000 loan state with 0 bookings and 0 expenses?')) {
-      store.resetToFreshState();
-      window.location.reload();
+  const handleConfirmFactoryReset = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetLoanAmount || resetLoanAmount <= 0) {
+      alert('Please enter a valid loan principal amount.');
+      return;
     }
+
+    store.resetToFreshState(Number(resetLoanAmount), Number(resetEmiAmount));
+    setShowResetModal(false);
+    window.location.reload();
   };
 
   return (
@@ -107,11 +119,16 @@ export default function Dashboard() {
             <span>Scan Receipt (OCR)</span>
           </Link>
           <button
-            onClick={handleResetData}
-            title="Reset data to clean slate"
-            className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-xs"
+            onClick={() => {
+              setResetLoanAmount(loan.initialPrincipal);
+              setResetEmiAmount(loan.monthlyEmi);
+              setShowResetModal(true);
+            }}
+            title="Factory Reset & Set Custom Loan Amount"
+            className="p-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800 text-xs transition-all flex items-center gap-1.5 font-semibold"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4 text-rose-400" />
+            <span className="hidden sm:inline">Factory Reset</span>
           </button>
         </div>
       </div>
@@ -214,7 +231,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <p className="text-xs text-amber-300/80 mt-0.5">
-                Partnership Rule: Profit distribution is strictly disabled until the total ₹11,81,000 loan principal balance reaches ₹0.
+                Partnership Rule: Profit distribution is strictly disabled until the total ₹{loan.initialPrincipal.toLocaleString('en-IN')} loan principal balance reaches ₹0.
               </p>
             </div>
           </div>
@@ -231,7 +248,7 @@ export default function Dashboard() {
             <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-slate-900 text-amber-300 text-xs rounded-xl shadow-xl border border-amber-900 z-20">
               <p className="font-semibold text-amber-200 mb-1">🔒 Profit Vault is Locked</p>
               <p className="text-[11px] leading-relaxed">
-                As per partnership terms for Kia Carens KA09MK6792, all earnings prioritize the ₹21,000 EMI and ₹5,000 maintenance fund until the principal is ₹0.
+                As per partnership terms for Kia Carens KA09MK6792, all earnings prioritize the ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI and ₹5,000 maintenance fund until the principal is ₹0.
               </p>
             </div>
           </div>
@@ -250,8 +267,8 @@ export default function Dashboard() {
             ></div>
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 pt-1">
-            <span>Loan Start: ₹11.81 Lakhs (84 Months)</span>
-            <span>EMI: ₹21,000 / month</span>
+            <span>Loan Start: ₹{(loan.initialPrincipal / 100000).toFixed(2)} Lakhs ({loan.tenureMonths} Months)</span>
+            <span>EMI: ₹{loan.monthlyEmi.toLocaleString('en-IN')} / month</span>
             <span>Goal: ₹0 Principal</span>
           </div>
         </div>
@@ -266,7 +283,7 @@ export default function Dashboard() {
               50:50 Out-of-Pocket Split Calculator
             </h2>
             <p className="text-xs text-slate-400">
-              Evaluates monthly revenue against ₹21,000 EMI + ₹5,000 Maintenance target (₹26,000 total).
+              Evaluates monthly revenue against ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance target (₹{totalRequiredTarget.toLocaleString('en-IN')} total).
             </p>
           </div>
 
@@ -321,7 +338,7 @@ export default function Dashboard() {
               ₹{totalRequiredTarget.toLocaleString('en-IN')}
             </span>
             <span className="text-[10px] text-slate-400 block mt-0.5">
-              (₹21,000 EMI + ₹5,000 Maintenance)
+              (₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance)
             </span>
           </div>
 
@@ -364,7 +381,7 @@ export default function Dashboard() {
                 No Out-of-Pocket Deposit Required
               </h3>
               <p className="text-xs text-emerald-300/80">
-                Monthly fleet revenue covers the ₹21,000 EMI and ₹5,000 maintenance fund retention target cleanly!
+                Monthly fleet revenue covers the ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI and ₹5,000 maintenance fund retention target cleanly!
               </p>
             </div>
           </div>
@@ -448,6 +465,79 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* FACTORY RESET CAUTION MODAL */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="glass-card w-full max-w-md p-6 rounded-2xl border-rose-500/40 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-rose-400">
+                <ShieldAlert className="w-6 h-6" />
+                <h2 className="text-lg font-bold text-white">Factory Reset & Initial Setup</h2>
+              </div>
+              <button onClick={() => setShowResetModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl space-y-1">
+              <span className="text-xs font-bold text-rose-300 block uppercase tracking-wider">
+                ⚠️ Caution: Data Reset Notice
+              </span>
+              <p className="text-xs text-rose-200/90 leading-relaxed">
+                Performing a Factory Reset will purge all logged bookings, OCR receipt scans, and audit logs. The loan balance will be re-initialized from scratch.
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmFactoryReset} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Initial Vehicle Loan Principal Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={resetLoanAmount}
+                  onChange={(e) => setResetLoanAmount(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-rose-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Default pre-filled: ₹11,81,000</p>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Monthly EMI Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={resetEmiAmount}
+                  onChange={(e) => setResetEmiAmount(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-rose-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Default pre-filled: ₹21,000</p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Confirm Factory Reset</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -11,7 +11,13 @@ import {
   ShieldCheck, 
   FileText,
   Loader2,
-  Sparkles
+  Sparkles,
+  Users,
+  CheckCircle2,
+  Clock,
+  ArrowRightLeft,
+  CreditCard,
+  X
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Expense, ExpenseCategory, PartnerUser } from '@/lib/types';
@@ -35,11 +41,19 @@ export default function ExpensesPage() {
     billPhotoUrl: '',
     ocrVendor: '',
     ocrDate: '',
+    isSplit: true,
+    paidBy: 'Sanjay P' as PartnerUser,
   });
 
+  // Settle Expense Modal State
+  const [settleModalExpense, setSettleModalExpense] = useState<Expense | null>(null);
+  const [settlementMode, setSettlementMode] = useState<string>('UPI / PhonePe / GPay');
+
   useEffect(() => {
-    setCurrentUser(store.getCurrentUser());
+    const user = store.getCurrentUser();
+    setCurrentUser(user);
     setExpenses(store.getExpenses());
+    setFormData((prev) => ({ ...prev, paidBy: user }));
   }, []);
 
   const refreshExpenses = () => {
@@ -112,21 +126,27 @@ export default function ExpensesPage() {
 
   const handleSaveExpense = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.amount || Number(formData.amount) <= 0) {
+    const numericAmount = Number(formData.amount);
+    if (!formData.amount || numericAmount <= 0) {
       alert('Please enter a valid expense amount.');
       return;
     }
 
+    const splitAmount = formData.isSplit ? Math.ceil(numericAmount / 2) : 0;
+
     store.addExpense({
       category: formData.category,
-      amount: Number(formData.amount),
+      amount: numericAmount,
       description: formData.description || `${formData.category} expense`,
       billPhotoUrl: formData.billPhotoUrl || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&auto=format&fit=crop&q=80',
       ocrExtractedData: formData.ocrVendor ? {
         vendor: formData.ocrVendor,
-        amount: Number(formData.amount),
+        amount: numericAmount,
       } : undefined,
-      loggedBy: currentUser,
+      loggedBy: formData.paidBy,
+      isSplit: formData.isSplit,
+      splitAmount: splitAmount,
+      settledStatus: formData.isSplit ? 'Pending' : 'Settled',
     });
 
     refreshExpenses();
@@ -138,10 +158,39 @@ export default function ExpensesPage() {
       billPhotoUrl: '',
       ocrVendor: '',
       ocrDate: '',
+      isSplit: true,
+      paidBy: currentUser,
     });
   };
 
+  const handleConfirmSettlement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settleModalExpense) return;
+
+    store.settleExpense(settleModalExpense.id, settlementMode, currentUser);
+    refreshExpenses();
+    setSettleModalExpense(null);
+  };
+
+  // Compute ledger metrics
   const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Split debt calculations
+  let sachinOwesSanjay = 0;
+  let sanjayOwesSachin = 0;
+
+  expenses.forEach((e) => {
+    if (e.isSplit && e.settledStatus === 'Pending') {
+      const debt = e.splitAmount || 0;
+      if (e.loggedBy === 'Sanjay P') {
+        sachinOwesSanjay += debt;
+      } else {
+        sanjayOwesSachin += debt;
+      }
+    }
+  });
+
+  const netBalance = sachinOwesSanjay - sanjayOwesSachin;
 
   return (
     <div className="space-y-6">
@@ -151,14 +200,15 @@ export default function ExpensesPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Receipt className="w-6 h-6 text-amber-400" />
-            Expense & Maintenance Ledger (OCR Bill Scanner)
+            Expense Ledger & Partner Split Calculator
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Enforces the ₹5,000 monthly retention rule for vehicle maintenance. Client-side Tesseract.js OCR parses fuel & garage receipts for ₹0 cost.
+            Enforces the ₹5,000 monthly retention rule for vehicle maintenance. Tesseract.js OCR parses fuel/service bills for ₹0 cost with 50:50 partner split tracking.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
+          {/* File input trigger for OCR */}
           <label className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-all shadow-lg shadow-amber-600/30 flex items-center space-x-2 cursor-pointer">
             <Scan className="w-4 h-4" />
             <span>Scan Receipt with OCR</span>
@@ -178,6 +228,53 @@ export default function ExpensesPage() {
             <Plus className="w-4 h-4" />
             <span>Manual Expense</span>
           </button>
+        </div>
+      </div>
+
+      {/* PARTNER SPLIT SETTLEMENT LEDGER SUMMARY CARD */}
+      <div className="glass-card-amber p-6 rounded-2xl border border-amber-500/40 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/30 pb-3">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-amber-200">50:50 Out-of-Pocket Partner Settlement Ledger</h2>
+              <p className="text-xs text-amber-300/80">Tracks who paid for fuel/repairs and calculates pending partner repayments</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-xs text-amber-300 block font-semibold">Net Partner Balance</span>
+            <span className="text-lg font-black text-white">
+              {netBalance > 0 ? `Sachin owes Sanjay P ₹${netBalance.toLocaleString('en-IN')}` :
+               netBalance < 0 ? `Sanjay P owes Sachin ₹${Math.abs(netBalance).toLocaleString('en-IN')}` :
+               'All Partner Expenses Settled!'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block mb-1">Sachin Owes Sanjay P</span>
+            <span className="text-base font-bold text-emerald-400 font-mono">
+              ₹{sachinOwesSanjay.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block mb-1">Sanjay P Owes Sachin</span>
+            <span className="text-base font-bold text-sky-400 font-mono">
+              ₹{sanjayOwesSachin.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block mb-1">Total Logged Operational Bills</span>
+            <span className="text-base font-bold text-amber-400 font-mono">
+              ₹{totalExpenseAmount.toLocaleString('en-IN')}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -203,13 +300,13 @@ export default function ExpensesPage() {
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              Log New Operational Expense
+              Log New Operational Expense & Set Split Option
             </h2>
             <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white">✕</button>
           </div>
 
           <form onSubmit={handleSaveExpense} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div>
                 <label className="block text-slate-400 mb-1 font-semibold">Expense Category</label>
                 <select
@@ -226,7 +323,7 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-semibold">Expense Amount (₹)</label>
+                <label className="block text-slate-400 mb-1 font-semibold">Total Amount (₹)</label>
                 <input
                   type="number"
                   required
@@ -238,15 +335,38 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-semibold">Logged By</label>
-                <input
-                  type="text"
-                  disabled
-                  value={currentUser}
-                  className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-slate-400 font-semibold"
-                />
+                <label className="block text-slate-400 mb-1 font-semibold">Paid By</label>
+                <select
+                  value={formData.paidBy}
+                  onChange={(e) => setFormData({ ...formData, paidBy: e.target.value as PartnerUser })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-semibold"
+                >
+                  <option value="Sanjay P">Sanjay P</option>
+                  <option value="Sachin">Sachin</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col justify-end">
+                <label className="flex items-center space-x-2 p-2 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isSplit}
+                    onChange={(e) => setFormData({ ...formData, isSplit: e.target.checked })}
+                    className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500"
+                  />
+                  <span className="font-semibold text-white">Split 50:50 with partner</span>
+                </label>
               </div>
             </div>
+
+            {formData.isSplit && formData.amount && Number(formData.amount) > 0 && (
+              <div className="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-sky-200 font-semibold flex items-center justify-between">
+                <span>50:50 Calculation:</span>
+                <span>
+                  {formData.paidBy} paid ₹{Number(formData.amount).toLocaleString('en-IN')}. Partner owes: <strong>₹{Math.ceil(Number(formData.amount) / 2).toLocaleString('en-IN')}</strong>
+                </span>
+              </div>
+            )}
 
             <div>
               <label className="block text-slate-400 mb-1 font-semibold">Description / Notes</label>
@@ -271,7 +391,7 @@ export default function ExpensesPage() {
                 type="submit"
                 className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-lg shadow-amber-600/30"
               >
-                Save Expense Entry
+                Save Expense & Update Ledger
               </button>
             </div>
           </form>
@@ -281,7 +401,7 @@ export default function ExpensesPage() {
       {/* Expenses History List */}
       <div className="glass-card p-6 rounded-2xl border-slate-800 space-y-4">
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-          <h2 className="text-base font-bold text-white">Operational Expenses Ledger</h2>
+          <h2 className="text-base font-bold text-white">Operational Expenses & Split Ledger</h2>
           <span className="text-sm font-extrabold text-amber-400">
             Total Logged: ₹{totalExpenseAmount.toLocaleString('en-IN')}
           </span>
@@ -289,44 +409,79 @@ export default function ExpensesPage() {
 
         {expenses.length > 0 ? (
           <div className="space-y-3">
-            {expenses.map((exp) => (
-              <div key={exp.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-start space-x-3">
-                  <div className="p-2.5 rounded-xl bg-slate-800 text-amber-400 shrink-0">
-                    {exp.category === 'Fuel' ? <Fuel className="w-5 h-5" /> :
-                     exp.category === 'Garage Servicing' ? <Wrench className="w-5 h-5" /> :
-                     exp.category === 'Tyre Replacement' ? <Disc className="w-5 h-5" /> :
-                     <ShieldCheck className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-white text-sm">{exp.category}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono">
-                        Logged by {exp.loggedBy}
+            {expenses.map((exp) => {
+              const otherPartner: PartnerUser = exp.loggedBy === 'Sanjay P' ? 'Sachin' : 'Sanjay P';
+              return (
+                <div key={exp.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2.5 rounded-xl bg-slate-800 text-amber-400 shrink-0">
+                        {exp.category === 'Fuel' ? <Fuel className="w-5 h-5" /> :
+                         exp.category === 'Garage Servicing' ? <Wrench className="w-5 h-5" /> :
+                         exp.category === 'Tyre Replacement' ? <Disc className="w-5 h-5" /> :
+                         <ShieldCheck className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-white text-sm">{exp.category}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                            Paid by {exp.loggedBy}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-0.5">{exp.description}</p>
+                        <p className="text-[11px] text-slate-400 mt-1">{new Date(exp.createdAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                      {exp.billPhotoUrl && (
+                        <a
+                          href={exp.billPhotoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-sky-400 hover:underline flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View Receipt
+                        </a>
+                      )}
+                      <span className="text-base font-extrabold text-rose-400 font-mono">
+                        -₹{exp.amount.toLocaleString('en-IN')}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300 mt-0.5">{exp.description}</p>
-                    <p className="text-[11px] text-slate-400 mt-1">{new Date(exp.createdAt).toLocaleString()}</p>
                   </div>
-                </div>
 
-                <div className="flex items-center space-x-4">
-                  {exp.billPhotoUrl && (
-                    <a
-                      href={exp.billPhotoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-sky-400 hover:underline flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
-                    >
-                      <FileText className="w-3.5 h-3.5" /> View Receipt
-                    </a>
+                  {/* 50:50 Split & Settlement Status Footer */}
+                  {exp.isSplit && (
+                    <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center space-x-2">
+                        {exp.settledStatus === 'Settled' ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Settled via {exp.settlementMode || 'Payment'} ({exp.settledBy})
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 font-semibold flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 animate-pulse" /> 50:50 Split Pending: {otherPartner} owes ₹{exp.splitAmount?.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Settle / Pay Split Button */}
+                      {exp.settledStatus === 'Pending' && (
+                        <button
+                          onClick={() => setSettleModalExpense(exp)}
+                          className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all flex items-center gap-1"
+                        >
+                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                          <span>Record / Settle Split Payment</span>
+                        </button>
+                      )}
+                    </div>
                   )}
-                  <span className="text-base font-extrabold text-rose-400 font-mono">
-                    -₹{exp.amount.toLocaleString('en-IN')}
-                  </span>
+
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="p-10 text-center border border-dashed border-slate-800 rounded-xl space-y-2">
@@ -338,6 +493,77 @@ export default function ExpensesPage() {
           </div>
         )}
       </div>
+
+      {/* MODAL: Settle Partner Split Payment */}
+      {settleModalExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="glass-card w-full max-w-md p-6 rounded-2xl border-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-emerald-400" />
+                Record Partner Split Settlement
+              </h2>
+              <button onClick={() => setSettleModalExpense(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs space-y-1">
+              <p className="text-slate-300">
+                Expense: <strong>{settleModalExpense.description}</strong>
+              </p>
+              <p className="text-slate-300">
+                Originally Paid By: <strong>{settleModalExpense.loggedBy}</strong> (Total ₹{settleModalExpense.amount.toLocaleString('en-IN')})
+              </p>
+              <p className="text-emerald-400 font-bold text-sm pt-1">
+                Split Amount Owed: ₹{settleModalExpense.splitAmount?.toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmSettlement} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1 font-semibold">Payment / Settlement Mode</label>
+                <select
+                  value={settlementMode}
+                  onChange={(e) => setSettlementMode(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-semibold"
+                >
+                  <option value="UPI / PhonePe / GPay">UPI / PhonePe / GPay</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer (NEFT/IMPS)">Bank Transfer (NEFT/IMPS)</option>
+                  <option value="Offset against Fleet Booking Revenue">Offset against Fleet Booking Revenue</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 font-semibold">Settled By Partner</label>
+                <input
+                  type="text"
+                  disabled
+                  value={currentUser}
+                  className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-slate-400 font-semibold"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setSettleModalExpense(null)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-600/30"
+                >
+                  Confirm Settlement & Update Ledger
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

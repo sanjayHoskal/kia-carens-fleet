@@ -3,37 +3,104 @@
 @import "tailwindcss/utilities";
 
 @layer base {
-  body {
+  html.dark body {
     @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-sky-500 selection:text-white;
+  }
+  
+  html.light body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased min-h-screen selection:bg-sky-500 selection:text-white;
   }
 }
 
-.glass-card {
+/* Glassmorphism Dark Mode */
+html.dark .glass-card {
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.glass-card-amber {
+html.dark .glass-card-amber {
   background: rgba(45, 26, 0, 0.4);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
-.glass-card-emerald {
+html.dark .glass-card-emerald {
   background: rgba(6, 44, 28, 0.4);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-.glass-card-sky {
-  background: rgba(12, 45, 80, 0.4);
+/* Glassmorphism Light Mode */
+html.light .glass-card {
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(14, 165, 233, 0.25);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+html.light .glass-card-amber {
+  background: rgba(254, 243, 199, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+html.light .glass-card-emerald {
+  background: rgba(209, 250, 229, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+/* Theme overrides for light mode text & card elements */
+html.light header {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light header span, html.light header p, html.light header button {
+  color: #0f172a;
+}
+
+html.light .bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-100 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-200 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-300 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.light input, html.light select, html.light textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
 }
 
 /* Scrollbar styling */
