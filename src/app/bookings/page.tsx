@@ -353,132 +353,150 @@ export default function BookingsPage() {
 
       {/* Bookings List Table / Cards */}
       <div className="space-y-4">
-        {filteredBookings.map((booking) => (
-          <div key={booking.id} className="glass-card p-5 rounded-2xl border-slate-800 space-y-4 hover:border-slate-700 transition-all">
-            
-            {/* Top row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-              <div className="flex items-center space-x-3">
-                <div className={`p-2.5 rounded-xl text-white font-bold text-xs ${
-                  booking.source === 'Zoomcar' ? 'bg-purple-900/60 border border-purple-700 text-purple-300' :
-                  booking.source === 'Retail Dealer' ? 'bg-amber-900/60 border border-amber-700 text-amber-300' :
-                  'bg-sky-900/60 border border-sky-700 text-sky-300'
-                }`}>
-                  {booking.source}
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="text-base font-bold text-white">{booking.guestName}</h3>
-                    <span className="text-xs text-slate-400 font-mono">({booking.id})</span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Phone: {booking.guestPhone} • DL: {booking.guestDl} • Aadhaar: {booking.guestAadhaar}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Badge */}
-              <div className="flex items-center space-x-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  booking.status === 'Completed' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
-                  booking.status === 'Active' ? 'bg-sky-950 text-sky-400 border border-sky-800 animate-pulse' :
-                  booking.status === 'Pre-Handover Complete' ? 'bg-indigo-950 text-indigo-400 border border-indigo-800' :
-                  'bg-amber-950 text-amber-400 border border-amber-800'
-                }`}>
-                  {booking.status}
-                </span>
-                <span className="text-lg font-extrabold text-emerald-400">
-                  ₹{booking.totalAmount.toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
-
-            {/* Inspection & Action Buttons Row */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        {filteredBookings.length > 0 ? (
+          filteredBookings.map((booking) => (
+            <div key={booking.id} className="glass-card p-5 rounded-2xl border-slate-800 space-y-4 hover:border-slate-700 transition-all">
               
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
-                  Dates: {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
-                </span>
-                {booking.preInspection && (
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium">
-                    ✓ Pre-Inspection Logged ({booking.preInspection.odometerKm} KM, Fuel: {booking.preInspection.fuelLevel}%)
+              {/* Top row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2.5 rounded-xl text-white font-bold text-xs ${
+                    booking.source === 'Zoomcar' ? 'bg-purple-900/60 border border-purple-700 text-purple-300' :
+                    booking.source === 'Retail Dealer' ? 'bg-amber-900/60 border border-amber-700 text-amber-300' :
+                    'bg-sky-900/60 border border-sky-700 text-sky-300'
+                  }`}>
+                    {booking.source}
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-base font-bold text-white">{booking.guestName}</h3>
+                      <span className="text-xs text-slate-400 font-mono">({booking.id})</span>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Phone: {booking.guestPhone} • DL: {booking.guestDl} • Aadhaar: {booking.guestAadhaar}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex items-center space-x-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    booking.status === 'Completed' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
+                    booking.status === 'Active' ? 'bg-sky-950 text-sky-400 border border-sky-800 animate-pulse' :
+                    booking.status === 'Pre-Handover Complete' ? 'bg-indigo-950 text-indigo-400 border border-indigo-800' :
+                    'bg-amber-950 text-amber-400 border border-amber-800'
+                  }`}>
+                    {booking.status}
                   </span>
-                )}
+                  <span className="text-lg font-extrabold text-emerald-400">
+                    ₹{booking.totalAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
 
-              {/* Action Triggers */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Inspection & Action Buttons Row */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 
-                {/* Generate PDF Contract */}
-                <button
-                  onClick={() => generateAgreementPDF(booking)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1"
-                >
-                  <FileText className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Rental Contract PDF</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
+                    Dates: {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                  </span>
+                  {booking.preInspection && (
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium">
+                      ✓ Pre-Inspection Logged ({booking.preInspection.odometerKm} KM, Fuel: {booking.preInspection.fuelLevel}%)
+                    </span>
+                  )}
+                </div>
 
-                {/* WhatsApp Greeting Trigger */}
-                <button
-                  onClick={() => triggerWhatsAppGreeting(booking)}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-300 text-xs font-medium border border-emerald-700 flex items-center space-x-1"
-                >
-                  <Send className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>WhatsApp Greeting</span>
-                </button>
-
-                {/* Pre-Handover Checklist Trigger */}
-                {booking.status === 'Confirmed' && (
+                {/* Action Triggers */}
+                <div className="flex flex-wrap items-center gap-2">
+                  
+                  {/* Generate PDF Contract */}
                   <button
-                    onClick={() => {
-                      setSelectedBookingForPre(booking);
-                      setPreForm({
-                        frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
-                        backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
-                        leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
-                        rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
-                        fuelLevel: 100,
-                        odometerKm: 42750,
-                      });
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center space-x-1"
+                    onClick={() => generateAgreementPDF(booking)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1"
                   >
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>Pre-Handover Checklist</span>
+                    <FileText className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Rental Contract PDF</span>
                   </button>
-                )}
 
-                {/* Post-Return Checklist Trigger */}
-                {(booking.status === 'Pre-Handover Complete' || booking.status === 'Active') && (
+                  {/* WhatsApp Greeting Trigger */}
                   <button
-                    onClick={() => {
-                      setSelectedBookingForPost(booking);
-                      const preOdo = booking.preInspection?.odometerKm || 42750;
-                      setPostForm({
-                        frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
-                        backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
-                        leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
-                        rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
-                        fuelLevel: 90,
-                        odometerKm: preOdo + 380,
-                        allowedKmPerDay: 300,
-                        ratePerExtraKm: 15,
-                        ratePerFuelPct: 45,
-                      });
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1"
+                    onClick={() => triggerWhatsAppGreeting(booking)}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-300 text-xs font-medium border border-emerald-700 flex items-center space-x-1"
                   >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Post-Return Offboarding</span>
+                    <Send className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>WhatsApp Greeting</span>
                   </button>
-                )}
 
+                  {/* Pre-Handover Checklist Trigger */}
+                  {booking.status === 'Confirmed' && (
+                    <button
+                      onClick={() => {
+                        setSelectedBookingForPre(booking);
+                        setPreForm({
+                          frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
+                          backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
+                          leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
+                          rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
+                          fuelLevel: 100,
+                          odometerKm: 42750,
+                        });
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center space-x-1"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Pre-Handover Checklist</span>
+                    </button>
+                  )}
+
+                  {/* Post-Return Checklist Trigger */}
+                  {(booking.status === 'Pre-Handover Complete' || booking.status === 'Active') && (
+                    <button
+                      onClick={() => {
+                        setSelectedBookingForPost(booking);
+                        const preOdo = booking.preInspection?.odometerKm || 42750;
+                        setPostForm({
+                          frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
+                          backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
+                          leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
+                          rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
+                          fuelLevel: 90,
+                          odometerKm: preOdo + 380,
+                          allowedKmPerDay: 300,
+                          ratePerExtraKm: 15,
+                          ratePerFuelPct: 45,
+                        });
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Post-Return Offboarding</span>
+                    </button>
+                  )}
+
+                </div>
               </div>
-            </div>
 
+            </div>
+          ))
+        ) : (
+          <div className="glass-card p-12 rounded-2xl border-slate-800 text-center space-y-3">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/30 flex items-center justify-center">
+              <CalendarCheck2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-white">No Fleet Bookings Yet</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Your booking ledger is clean. Click below to pre-onboard your first guest trip for Kia Carens KA09MK6792!
+            </p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-lg shadow-sky-600/30"
+            >
+              + Create First Booking
+            </button>
           </div>
-        ))}
+        )}
       </div>
 
       {/* MODAL 1: New Guest Pre-Onboarding Form */}
@@ -642,7 +660,7 @@ export default function BookingsPage() {
                   Mandatory 4 Vehicle Inspection Photos (Front, Back, Left, Right)
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  {['Front', 'Back', 'Left', 'Right'].map((side, idx) => {
+                  {['Front', 'Back', 'Left', 'Right'].map((side) => {
                     const key = `${side.toLowerCase()}Photo` as keyof typeof preForm;
                     return (
                       <div key={side} className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-center">

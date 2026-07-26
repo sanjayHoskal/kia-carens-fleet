@@ -5,19 +5,16 @@ import Link from 'next/link';
 import { 
   Car, 
   Lock, 
-  Unlock, 
   IndianRupee, 
   AlertTriangle, 
-  ShieldAlert, 
   CheckCircle2, 
   TrendingUp, 
   Receipt, 
   Wallet, 
   Calendar, 
   ArrowRight, 
-  Sparkles,
-  PieChart,
-  Users
+  Users,
+  RotateCcw
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, Expense, LoanState, PartnerUser } from '@/lib/types';
@@ -55,7 +52,7 @@ export default function Dashboard() {
   const deficit = Math.max(0, totalRequiredTarget - displayRevenue);
   const partnerSplit = Math.ceil(deficit / 2);
 
-  // Amortization metrics
+  // Amortization metrics (Fresh start: ₹11,81,000 principal)
   const clearedPrincipal = loan.initialPrincipal - loan.currentPrincipal;
   const progressPercent = Math.min(100, Math.round((clearedPrincipal / loan.initialPrincipal) * 100));
   const remainingMonths = Math.ceil(loan.currentPrincipal / loan.monthlyEmi);
@@ -64,6 +61,13 @@ export default function Dashboard() {
   const maintenanceWalletBalance = Math.min(maintenanceTarget, displayRevenue);
 
   const activeBooking = bookings.find((b) => b.status === 'Active');
+
+  const handleResetData = () => {
+    if (confirm('Reset entire ledger to fresh ₹11,81,000 loan state with 0 bookings and 0 expenses?')) {
+      store.resetToFreshState();
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -102,6 +106,13 @@ export default function Dashboard() {
             <Receipt className="w-4 h-4" />
             <span>Scan Receipt (OCR)</span>
           </Link>
+          <button
+            onClick={handleResetData}
+            title="Reset data to clean slate"
+            className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-xs"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -136,7 +147,7 @@ export default function Dashboard() {
             ₹{actualMonthlyRevenue.toLocaleString('en-IN')}
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            {currentMonthBookings.length} Bookings this month
+            {currentMonthBookings.length} Bookings logged
           </p>
         </div>
 
@@ -203,7 +214,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <p className="text-xs text-amber-300/80 mt-0.5">
-                Partnership Rule: Profit distribution is strictly disabled until the total ₹11,82,000 loan principal balance reaches ₹0.
+                Partnership Rule: Profit distribution is strictly disabled until the total ₹11,81,000 loan principal balance reaches ₹0.
               </p>
             </div>
           </div>
@@ -239,7 +250,7 @@ export default function Dashboard() {
             ></div>
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 pt-1">
-            <span>Loan Start: ₹11.82 Lakhs (84 Months)</span>
+            <span>Loan Start: ₹11.81 Lakhs (84 Months)</span>
             <span>EMI: ₹21,000 / month</span>
             <span>Goal: ₹0 Principal</span>
           </div>
@@ -375,29 +386,38 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {bookings.slice(0, 3).map((b) => (
-              <div key={b.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-slate-100 text-sm">{b.guestName}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      b.source === 'Zoomcar' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                      b.source === 'Retail Dealer' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
-                      'bg-sky-950 text-sky-300 border border-sky-800'
-                    }`}>
-                      {b.source}
-                    </span>
+          {bookings.length > 0 ? (
+            <div className="space-y-3">
+              {bookings.slice(0, 3).map((b) => (
+                <div key={b.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-slate-100 text-sm">{b.guestName}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        b.source === 'Zoomcar' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                        b.source === 'Retail Dealer' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                        'bg-sky-950 text-sky-300 border border-sky-800'
+                      }`}>
+                        {b.source}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">{b.guestPhone} • {b.status}</p>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">{b.guestPhone} • {b.status}</p>
+                  <div className="text-right">
+                    <span className="font-bold text-emerald-400 text-sm">₹{b.totalAmount.toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] text-slate-400 block">{new Date(b.startDate).toLocaleDateString()}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-bold text-emerald-400 text-sm">₹{b.totalAmount.toLocaleString('en-IN')}</span>
-                  <span className="text-[10px] text-slate-400 block">{new Date(b.startDate).toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center border border-dashed border-slate-800 rounded-xl">
+              <p className="text-xs text-slate-400">No bookings created yet.</p>
+              <Link href="/bookings" className="text-xs text-sky-400 hover:underline font-semibold mt-1 inline-block">
+                + Create First Booking
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Financial Retention Flow Card */}

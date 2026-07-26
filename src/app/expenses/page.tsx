@@ -5,10 +5,6 @@ import {
   Receipt, 
   Plus, 
   Scan, 
-  UploadCloud, 
-  CheckCircle, 
-  Wallet, 
-  AlertCircle, 
   Fuel, 
   Wrench, 
   Disc, 
@@ -60,36 +56,30 @@ export default function ExpensesPage() {
     setScanStatusText('Loading image & initializing Tesseract OCR engine...');
 
     try {
-      // Create object URL for preview
       const imageUri = URL.createObjectURL(file);
       setFormData((prev) => ({ ...prev, billPhotoUrl: imageUri }));
 
-      // Initialize Tesseract Worker
       const worker = await createWorker('eng');
       setScanProgress(40);
       setScanStatusText('Extracting text from receipt...');
 
       const ret = await worker.recognize(imageUri);
       const text = ret.data.text;
-      console.log('Extracted OCR Text:', text);
 
       setScanProgress(80);
       setScanStatusText('Analyzing text for amount, date, and vendor...');
 
-      // Parse Amount using regex
       const amountMatches = text.match(/(?:rs\.?|inr|total|amt|amount|₹)\s*([\d,]+\.?\d*)/i) || text.match(/([\d]{3,5}\.\d{2})/);
       let detectedAmount = '';
       if (amountMatches && amountMatches[1]) {
         detectedAmount = amountMatches[1].replace(/,/g, '');
       } else {
-        // Fallback: look for largest number in text
         const numbers = text.match(/\b\d{3,5}\b/g);
         if (numbers && numbers.length > 0) {
           detectedAmount = Math.max(...numbers.map(Number)).toString();
         }
       }
 
-      // Parse Category
       let detectedCategory: ExpenseCategory = 'Fuel';
       if (/garage|service|oil|filter|repair|mechanic/i.test(text)) {
         detectedCategory = 'Garage Servicing';
@@ -169,7 +159,6 @@ export default function ExpensesPage() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* File input trigger for OCR */}
           <label className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-all shadow-lg shadow-amber-600/30 flex items-center space-x-2 cursor-pointer">
             <Scan className="w-4 h-4" />
             <span>Scan Receipt with OCR</span>
@@ -298,46 +287,56 @@ export default function ExpensesPage() {
           </span>
         </div>
 
-        <div className="space-y-3">
-          {expenses.map((exp) => (
-            <div key={exp.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start space-x-3">
-                <div className="p-2.5 rounded-xl bg-slate-800 text-amber-400 shrink-0">
-                  {exp.category === 'Fuel' ? <Fuel className="w-5 h-5" /> :
-                   exp.category === 'Garage Servicing' ? <Wrench className="w-5 h-5" /> :
-                   exp.category === 'Tyre Replacement' ? <Disc className="w-5 h-5" /> :
-                   <ShieldCheck className="w-5 h-5" />}
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-white text-sm">{exp.category}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono">
-                      Logged by {exp.loggedBy}
-                    </span>
+        {expenses.length > 0 ? (
+          <div className="space-y-3">
+            {expenses.map((exp) => (
+              <div key={exp.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start space-x-3">
+                  <div className="p-2.5 rounded-xl bg-slate-800 text-amber-400 shrink-0">
+                    {exp.category === 'Fuel' ? <Fuel className="w-5 h-5" /> :
+                     exp.category === 'Garage Servicing' ? <Wrench className="w-5 h-5" /> :
+                     exp.category === 'Tyre Replacement' ? <Disc className="w-5 h-5" /> :
+                     <ShieldCheck className="w-5 h-5" />}
                   </div>
-                  <p className="text-xs text-slate-300 mt-0.5">{exp.description}</p>
-                  <p className="text-[11px] text-slate-400 mt-1">{new Date(exp.createdAt).toLocaleString()}</p>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-white text-sm">{exp.category}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono">
+                        Logged by {exp.loggedBy}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-0.5">{exp.description}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">{new Date(exp.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  {exp.billPhotoUrl && (
+                    <a
+                      href={exp.billPhotoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-sky-400 hover:underline flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> View Receipt
+                    </a>
+                  )}
+                  <span className="text-base font-extrabold text-rose-400 font-mono">
+                    -₹{exp.amount.toLocaleString('en-IN')}
+                  </span>
                 </div>
               </div>
-
-              <div className="flex items-center space-x-4">
-                {exp.billPhotoUrl && (
-                  <a
-                    href={exp.billPhotoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-sky-400 hover:underline flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> View Receipt
-                  </a>
-                )}
-                <span className="text-base font-extrabold text-rose-400 font-mono">
-                  -₹{exp.amount.toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-10 text-center border border-dashed border-slate-800 rounded-xl space-y-2">
+            <Receipt className="w-8 h-8 text-amber-500/40 mx-auto" />
+            <h3 className="text-sm font-bold text-white">No Expenses Logged Yet</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Your operational expense ledger is clean. Use "Scan Receipt with OCR" to snap fuel/service bills or log manually.
+            </p>
+          </div>
+        )}
       </div>
 
     </div>

@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS public.loan_settings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   vehicle_number TEXT NOT NULL DEFAULT 'KA09MK6792',
   vehicle_model TEXT NOT NULL DEFAULT 'Kia Carens',
-  initial_principal DECIMAL NOT NULL DEFAULT 1182000.00,
-  current_principal DECIMAL NOT NULL DEFAULT 1182000.00,
+  initial_principal DECIMAL NOT NULL DEFAULT 1181000.00,
+  current_principal DECIMAL NOT NULL DEFAULT 1181000.00,
   tenure_months INT NOT NULL DEFAULT 84,
   monthly_emi DECIMAL NOT NULL DEFAULT 21000.00,
   monthly_maintenance_target DECIMAL NOT NULL DEFAULT 5000.00,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.loan_settings (
 
 -- Insert default loan settings row
 INSERT INTO public.loan_settings (id, vehicle_number, vehicle_model, initial_principal, current_principal, tenure_months, monthly_emi, monthly_maintenance_target)
-VALUES ('00000000-0000-0000-0000-000000000001', 'KA09MK6792', 'Kia Carens', 1182000.00, 1182000.00, 84, 21000.00, 5000.00)
+VALUES ('00000000-0000-0000-0000-000000000001', 'KA09MK6792', 'Kia Carens', 1181000.00, 1181000.00, 84, 21000.00, 5000.00)
 ON CONFLICT (id) DO NOTHING;
 
 -- 3. Bookings Table
