@@ -24,12 +24,19 @@ const INITIAL_AUDIT_LOGS: AuditLog[] = [
 ];
 
 const STORAGE_KEYS = {
-  CURRENT_USER: 'kc_current_user_v2',
-  LOAN: 'kc_loan_state_v2',
-  BOOKINGS: 'kc_bookings_v2',
-  EXPENSES: 'kc_expenses_v2',
-  AUDIT: 'kc_audit_logs_v2',
+  CURRENT_USER: 'kc_current_user_v3',
+  LOAN: 'kc_loan_state_v3',
+  BOOKINGS: 'kc_bookings_v3',
+  EXPENSES: 'kc_expenses_v3',
+  AUDIT: 'kc_audit_logs_v3',
 };
+
+// Purge legacy cache on browser startup
+if (typeof window !== 'undefined') {
+  ['kc_loan_state', 'kc_bookings', 'kc_expenses', 'kc_audit_logs', 'kc_current_user', 'kc_loan_state_v2', 'kc_bookings_v2', 'kc_expenses_v2'].forEach(key => {
+    localStorage.removeItem(key);
+  });
+}
 
 export const store = {
   getCurrentUser(): PartnerUser {
@@ -141,10 +148,7 @@ export const store = {
 
   resetToFreshState() {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEYS.LOAN);
-      localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
-      localStorage.removeItem(STORAGE_KEYS.EXPENSES);
-      localStorage.removeItem(STORAGE_KEYS.AUDIT);
+      localStorage.clear();
     }
   }
 };
