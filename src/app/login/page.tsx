@@ -13,14 +13,20 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const PASSCODES: Record<PartnerUser, string> = {
+    'Sanjay P': '0707',
+    'Sachin': '1906',
+    'Admin': '9876',
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMsg('');
 
-    // Verification demo (Passcode is optional or 1234, accepts default)
-    if (passcode && passcode.trim() !== '1234' && passcode.trim() !== 'admin') {
-      setErrorMsg('Invalid passcode. Default passcode is 1234');
+    const expectedPasscode = PASSCODES[selectedUser];
+    if (passcode.trim() !== expectedPasscode) {
+      setErrorMsg(`Incorrect passcode for ${selectedUser}. Please enter passcode.`);
       setIsSubmitting(false);
       return;
     }
@@ -139,11 +145,11 @@ export default function LoginPage() {
 
             {/* Passcode Input */}
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Passcode (Optional - Default 1234)</label>
+              <label className="block text-slate-400 font-semibold mb-1">Enter Passcode for {selectedUser}</label>
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="Enter passcode (or leave blank)"
+                  placeholder="Enter passcode"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white pl-10 focus:outline-none focus:border-sky-500 font-mono text-sm"

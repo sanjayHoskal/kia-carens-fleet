@@ -211,15 +211,62 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-6">
       
-      {/* Header */}
+      {/* 1. TOP CARD: PARTNER SPLIT SETTLEMENT LEDGER */}
+      <div className="glass-card-amber p-6 rounded-2xl border border-amber-500/40 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/30 pb-3">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-amber-200">50:50 Out-of-Pocket Partner Settlement Ledger</h2>
+              <p className="text-xs text-amber-300/80">Tracks who paid for fuel/repairs and calculates pending partner repayments</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-xs text-amber-300 block font-semibold">Net Partner Balance</span>
+            <span className="text-lg font-black text-white">
+              {netBalance > 0 ? `Sachin owes Sanjay P ₹${netBalance.toLocaleString('en-IN')}` :
+               netBalance < 0 ? `Sanjay P owes Sachin ₹${Math.abs(netBalance).toLocaleString('en-IN')}` :
+               'All Partner Expenses Settled!'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block mb-1 font-semibold">Sachin Owes Sanjay P</span>
+            <span className="text-base font-bold text-emerald-400 font-mono">
+              ₹{sachinOwesSanjay.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block mb-1 font-semibold">Sanjay P Owes Sachin</span>
+            <span className="text-base font-bold text-sky-400 font-mono">
+              ₹{sanjayOwesSachin.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block mb-1 font-semibold">Total Logged Operational Bills</span>
+            <span className="text-base font-bold text-amber-400 font-mono">
+              ₹{totalExpenseAmount.toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Controls & Actions Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-card p-6 rounded-2xl border-slate-800">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Receipt className="w-6 h-6 text-amber-400" />
-            Expense Ledger & Partner Split Calculator
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-amber-400" />
+            Expense Logging & OCR Receipt Scanner
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Enforces the ₹5,000 monthly retention rule for vehicle maintenance. Tesseract.js OCR parses fuel/service bills for ₹0 cost with 50:50 partner split tracking.
+            Enforces the ₹5,000 monthly retention rule for vehicle maintenance. Tesseract.js OCR parses fuel/service bills for ₹0 cost.
           </p>
         </div>
 
@@ -251,53 +298,6 @@ export default function ExpensesPage() {
             <Plus className="w-4 h-4" />
             <span>Manual Expense</span>
           </button>
-        </div>
-      </div>
-
-      {/* PARTNER SPLIT SETTLEMENT LEDGER SUMMARY CARD */}
-      <div className="glass-card-amber p-6 rounded-2xl border border-amber-500/40 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/30 pb-3">
-          <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-amber-200">50:50 Out-of-Pocket Partner Settlement Ledger</h2>
-              <p className="text-xs text-amber-300/80">Tracks who paid for fuel/repairs and calculates pending partner repayments</p>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <span className="text-xs text-amber-300 block font-semibold">Net Partner Balance</span>
-            <span className="text-lg font-black text-white">
-              {netBalance > 0 ? `Sachin owes Sanjay P ₹${netBalance.toLocaleString('en-IN')}` :
-               netBalance < 0 ? `Sanjay P owes Sachin ₹${Math.abs(netBalance).toLocaleString('en-IN')}` :
-               'All Partner Expenses Settled!'}
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">Sachin Owes Sanjay P</span>
-            <span className="text-base font-bold text-emerald-400 font-mono">
-              ₹{sachinOwesSanjay.toLocaleString('en-IN')}
-            </span>
-          </div>
-
-          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">Sanjay P Owes Sachin</span>
-            <span className="text-base font-bold text-sky-400 font-mono">
-              ₹{sanjayOwesSachin.toLocaleString('en-IN')}
-            </span>
-          </div>
-
-          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">Total Logged Operational Bills</span>
-            <span className="text-base font-bold text-amber-400 font-mono">
-              ₹{totalExpenseAmount.toLocaleString('en-IN')}
-            </span>
-          </div>
         </div>
       </div>
 
