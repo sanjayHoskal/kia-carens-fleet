@@ -18,7 +18,8 @@ import {
   ArrowRightLeft,
   CreditCard,
   X,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Expense, ExpenseCategory, PartnerUser } from '@/lib/types';
@@ -178,6 +179,13 @@ export default function ExpensesPage() {
     store.settleExpense(settleModalExpense.id, settlementMode, currentUser);
     refreshExpenses();
     setSettleModalExpense(null);
+  };
+
+  const handleDeleteExpense = (id: string, description: string) => {
+    if (confirm(`Are you sure you want to delete expense "${description}"?`)) {
+      store.deleteExpense(id);
+      refreshExpenses();
+    }
   };
 
   // Compute ledger metrics
@@ -463,6 +471,13 @@ export default function ExpensesPage() {
                       <span className="text-base font-extrabold text-rose-400 font-mono">
                         -₹{exp.amount.toLocaleString('en-IN')}
                       </span>
+                      <button
+                        onClick={() => handleDeleteExpense(exp.id, exp.description)}
+                        title="Delete expense entry"
+                        className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-400 border border-rose-800/80 transition-all flex items-center justify-center"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 

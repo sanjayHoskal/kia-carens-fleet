@@ -20,7 +20,10 @@ import {
   ShieldCheck,
   Printer,
   Download,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  User,
+  PenTool
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, BookingSource, PartnerUser } from '@/lib/types';
@@ -30,6 +33,7 @@ export default function BookingsPage() {
   const [currentUser, setCurrentUser] = useState<PartnerUser>('Sanjay P');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | BookingSource>('all');
+  const [userScope, setUserScope] = useState<'mine' | 'all'>('mine');
   
   // New Booking Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -70,16 +74,36 @@ export default function BookingsPage() {
   });
 
   useEffect(() => {
-    setCurrentUser(store.getCurrentUser());
+    const user = store.getCurrentUser();
+    setCurrentUser(user);
+    if (user === 'Admin') {
+      setUserScope('all');
+    }
     setBookings(store.getBookings());
+    refreshBookingsAsync();
   }, []);
+
+  const refreshBookingsAsync = async () => {
+    const live = await store.fetchBookingsAsync();
+    setBookings(live);
+  };
 
   const refreshBookings = () => {
     setBookings(store.getBookings());
   };
 
+  const handleDeleteBooking = (id: string, guestName: string) => {
+    if (confirm(`Are you sure you want to delete booking "${id}" for guest ${guestName}?`)) {
+      store.deleteBooking(id);
+      refreshBookings();
+    }
+  };
+
   // Filter bookings
   const filteredBookings = bookings.filter((b) => {
+    if (userScope === 'mine' && currentUser !== 'Admin') {
+      if (b.createdBy && b.createdBy !== currentUser) return false;
+    }
     if (activeTab === 'all') return true;
     return b.source === activeTab;
   });
@@ -164,8 +188,20 @@ export default function BookingsPage() {
     doc.text('- Any traffic violations, FASTag tolls, or damages during the trip are guest liability.', 25, 166);
 
     doc.line(20, 180, 190, 180);
+    doc.setFontSize(10);
     doc.text('Lessor Signature: Sanjay P / Sachin', 25, 195);
-    doc.text('Guest Digital Signature: ______________________', 110, 195);
+    
+    if (booking.signatureUrl) {
+      doc.text('Guest Digital Signature (Verified):', 110, 188);
+      try {
+        doc.addImage(booking.signatureUrl, 'PNG', 110, 190, 50, 20);
+      } catch (err) {
+        console.error('Error adding signature image to PDF:', err);
+        doc.text('[Signature Image Verified]', 110, 195);
+      }
+    } else {
+      doc.text('Guest Digital Signature: ______________________', 110, 195);
+    }
 
     doc.save(`Kia_Carens_Rental_Agreement_${booking.guestName.replace(/\s+/g, '_')}.pdf`);
   };
@@ -324,30 +360,56 @@ export default function BookingsPage() {
         </button>
       </div>
 
-      {/* FEATURE 2: Multi-Channel Toggle Filter Bar */}
+      {/* User Scope & Multi-Channel Toggle Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 glass-card rounded-xl border-slate-800">
-        <div className="flex items-center space-x-2">
-          <span className="text-xs text-slate-400 font-semibold px-2">Channel Source:</span>
-          {(['all', 'Zoomcar', 'Retail Dealer', 'Private Trip'] as const).map((source) => (
-            <button
-              key={source}
-              onClick={() => setActiveTab(source)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === source
-                  ? source === 'Zoomcar' ? 'bg-purple-600 text-white' :
-                    source === 'Retail Dealer' ? 'bg-amber-600 text-white' :
-                    source === 'Private Trip' ? 'bg-sky-600 text-white' :
-                    'bg-slate-700 text-white'
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
-              }`}
-            >
-              {source === 'all' ? 'All Channels' : source}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* User Scope Filter Toggle */}
+          {currentUser !== 'Admin' && (
+            <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-lg">
+              <button
+                onClick={() => setUserScope('mine')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+                  userScope === 'mine' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>My Bookings ({currentUser})</span>
+              </button>
+              <button
+                onClick={() => setUserScope('all')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  userScope === 'all' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                All Fleet Bookings
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-1.5">
+            <span className="text-xs text-slate-400 font-semibold px-1">Channel:</span>
+            {(['all', 'Zoomcar', 'Retail Dealer', 'Private Trip'] as const).map((source) => (
+              <button
+                key={source}
+                onClick={() => setActiveTab(source)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === source
+                    ? source === 'Zoomcar' ? 'bg-purple-600 text-white' :
+                      source === 'Retail Dealer' ? 'bg-amber-600 text-white' :
+                      source === 'Private Trip' ? 'bg-sky-600 text-white' :
+                      'bg-slate-700 text-white'
+                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                }`}
+              >
+                {source === 'all' ? 'All' : source}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="text-xs text-slate-400 px-2 font-mono">
-          Total Bookings: {filteredBookings.length}
+          Showing {filteredBookings.length} Bookings
         </div>
       </div>
 
@@ -371,6 +433,11 @@ export default function BookingsPage() {
                     <div className="flex items-center space-x-2">
                       <h3 className="text-base font-bold text-white">{booking.guestName}</h3>
                       <span className="text-xs text-slate-400 font-mono">({booking.id})</span>
+                      {booking.createdBy && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">
+                          Created by {booking.createdBy}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-400">
                       Phone: {booking.guestPhone} • DL: {booking.guestDl} • Aadhaar: {booking.guestAadhaar}
@@ -401,6 +468,23 @@ export default function BookingsPage() {
                   <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
                     Dates: {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
                   </span>
+                  {booking.signatureUrl ? (
+                    <Link
+                      href={`/sign/${booking.id}`}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-semibold flex items-center gap-1 hover:bg-emerald-900/60"
+                    >
+                      <PenTool className="w-3.5 h-3.5" />
+                      <span>Signed ✓</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/sign/${booking.id}`}
+                      className="px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-400 font-semibold flex items-center gap-1 hover:bg-amber-900/60"
+                    >
+                      <PenTool className="w-3.5 h-3.5" />
+                      <span>Sign Needed ✍</span>
+                    </Link>
+                  )}
                   {booking.preInspection && (
                     <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium">
                       ✓ Pre-Inspection Logged ({booking.preInspection.odometerKm} KM, Fuel: {booking.preInspection.fuelLevel}%)
@@ -474,6 +558,15 @@ export default function BookingsPage() {
                       <span>Post-Return Offboarding</span>
                     </button>
                   )}
+
+                  {/* Delete Booking Trigger */}
+                  <button
+                    onClick={() => handleDeleteBooking(booking.id, booking.guestName)}
+                    title="Delete booking entry"
+                    className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-400 border border-rose-800/80 transition-all flex items-center justify-center"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
 
                 </div>
               </div>

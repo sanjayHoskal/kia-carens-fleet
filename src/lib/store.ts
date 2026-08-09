@@ -44,6 +44,16 @@ export const store = {
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, user);
   },
 
+  logout() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  },
+
+  isLoggedIn(): boolean {
+    if (typeof window === 'undefined') return true;
+    return !!localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+  },
+
   getTheme(): 'dark' | 'light' {
     if (typeof window === 'undefined') return 'dark';
     return (localStorage.getItem(STORAGE_KEYS.THEME) as 'dark' | 'light') || 'dark';
@@ -188,6 +198,26 @@ export const store = {
     return updatedItem;
   },
 
+  deleteBooking(id: string): boolean {
+    const current = this.getBookings();
+    const target = current.find((item) => item.id === id);
+    const updatedList = current.filter((item) => item.id !== id);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updatedList));
+    }
+
+    supabase.from('bookings').delete().eq('id', id).then(({ error }) => {
+      if (error) console.error('Supabase delete booking error:', error);
+    });
+
+    if (target) {
+      this.addAuditLog('Deleted Booking', `Deleted booking ${target.id} for guest ${target.guestName} (₹${target.totalAmount.toLocaleString('en-IN')})`);
+    }
+
+    return true;
+  },
+
   // --- EXPENSES ---
   getExpenses(): Expense[] {
     if (typeof window === 'undefined') return INITIAL_EXPENSES;
@@ -294,6 +324,26 @@ export const store = {
       this.addAuditLog('Settled Expense Split', `${partner} settled split amount of ₹${(updatedItem as Expense).splitAmount?.toLocaleString('en-IN')} via ${settlementMode} for expense ${(updatedItem as Expense).description}`);
     }
     return updatedItem;
+  },
+
+  deleteExpense(id: string): boolean {
+    const current = this.getExpenses();
+    const target = current.find((item) => item.id === id);
+    const updatedList = current.filter((item) => item.id !== id);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(updatedList));
+    }
+
+    supabase.from('expenses').delete().eq('id', id).then(({ error }) => {
+      if (error) console.error('Supabase delete expense error:', error);
+    });
+
+    if (target) {
+      this.addAuditLog('Deleted Expense', `Deleted ${target.category} expense of ₹${target.amount.toLocaleString('en-IN')} (${target.description})`);
+    }
+
+    return true;
   },
 
   // --- AUDIT LOGS ---

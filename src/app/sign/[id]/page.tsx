@@ -29,11 +29,21 @@ export default function GuestSignaturePage() {
 
   useEffect(() => {
     if (bookingId) {
-      const all = store.getBookings();
-      const match = all.find((b) => b.id === bookingId);
-      if (match) {
-        setBooking(match);
-      }
+      const loadBooking = async () => {
+        const all = store.getBookings();
+        let match = all.find((b) => b.id === bookingId);
+        if (!match) {
+          const live = await store.fetchBookingsAsync();
+          match = live.find((b) => b.id === bookingId);
+        }
+        if (match) {
+          setBooking(match);
+          if (match.signatureUrl) {
+            setSigned(true);
+          }
+        }
+      };
+      loadBooking();
     }
   }, [bookingId]);
 
@@ -94,13 +104,74 @@ export default function GuestSignaturePage() {
     const canvas = canvasRef.current;
     const dataUrl = canvas ? canvas.toDataURL() : '';
 
-    store.updateBooking(booking.id, {
+    const updated = store.updateBooking(booking.id, {
       signatureUrl: dataUrl,
       signedAgreementUrl: 'Signed_Agreement_Verified.pdf',
     });
 
+    if (updated) {
+      setBooking(updated);
+    } else {
+      setBooking((prev) => prev ? { ...prev, signatureUrl: dataUrl } : null);
+    }
+
     store.addAuditLog('Guest Signed Agreement', `Guest ${booking.guestName} digitally signed rental agreement for ${booking.id}`);
     setSigned(true);
+  };
+
+  const generatePDF = () => {
+    if (!booking) return;
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('KIA CARENS (KA09MK6792) RENTAL AGREEMENT', 20, 20);
+    doc.setFontSize(11);
+    doc.text(`Booking Reference: ${booking.id}`, 20, 32);
+    doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 20, 38);
+    doc.text(`Lessor / Partners: Sanjay P & Sachin`, 20, 44);
+
+    doc.line(20, 48, 190, 48);
+
+    doc.setFontSize(13);
+    doc.text('1. Guest Details', 20, 58);
+    doc.setFontSize(10);
+    doc.text(`Full Name: ${booking.guestName}`, 25, 66);
+    doc.text(`Mobile Phone: ${booking.guestPhone}`, 25, 72);
+    doc.text(`Aadhaar Number: ${booking.guestAadhaar}`, 25, 78);
+    doc.text(`Driving License: ${booking.guestDl}`, 25, 84);
+
+    doc.setFontSize(13);
+    doc.text('2. Rental & Booking Details', 20, 96);
+    doc.setFontSize(10);
+    doc.text(`Vehicle: Kia Carens (KA09MK6792)`, 25, 104);
+    doc.text(`Source Channel: ${booking.source}`, 25, 110);
+    doc.text(`Start Date: ${new Date(booking.startDate).toLocaleString()}`, 25, 116);
+    doc.text(`End Date: ${new Date(booking.endDate).toLocaleString()}`, 25, 122);
+    doc.text(`Total Agreed Rate: INR ${booking.totalAmount.toLocaleString('en-IN')}`, 25, 128);
+
+    doc.setFontSize(13);
+    doc.text('3. Terms & Conditions', 20, 140);
+    doc.setFontSize(9);
+    doc.text('- The vehicle must be driven safely within legal speed limits.', 25, 148);
+    doc.text('- Excess kilometer charge: ₹15/km beyond standard daily limit.', 25, 154);
+    doc.text('- Fuel must be returned at the same level as logged during handover.', 25, 160);
+    doc.text('- Any traffic violations, FASTag tolls, or damages during the trip are guest liability.', 25, 166);
+
+    doc.line(20, 180, 190, 180);
+    doc.setFontSize(10);
+    doc.text('Lessor Signature: Sanjay P / Sachin', 25, 195);
+    
+    if (booking.signatureUrl) {
+      doc.text('Guest Digital Signature (Verified):', 110, 188);
+      try {
+        doc.addImage(booking.signatureUrl, 'PNG', 110, 190, 50, 20);
+      } catch (err) {
+        console.error('PDF Signature error:', err);
+      }
+    } else {
+      doc.text('Guest Digital Signature: ______________________', 110, 195);
+    }
+
+    doc.save(`Kia_Carens_Rental_Agreement_${booking.guestName.replace(/\s+/g, '_')}.pdf`);
   };
 
   if (!booking) {
@@ -134,10 +205,33 @@ export default function GuestSignaturePage() {
           <p className="text-xs text-emerald-200 max-w-md mx-auto">
             Thank you, <strong>{booking.guestName}</strong>. Your rental contract for Kia Carens (KA09MK6792) has been recorded with a verified timestamp. Have a safe & enjoyable journey!
           </p>
-          <div className="pt-2">
-            <span className="text-[11px] px-3 py-1 bg-emerald-950 text-emerald-400 rounded-full border border-emerald-800 font-mono">
-              Status: Verified & Confirmed
-            </span>
+
+          {booking.signatureUrl && (
+            <div className="my-4 p-4 bg-slate-900/90 rounded-xl border border-emerald-500/30 inline-block">
+              <span className="text-xs text-slate-400 block mb-2 font-semibold">Recorded Digital Signature:</span>
+              <img
+                src={booking.signatureUrl}
+                alt="Digital Signature"
+                className="max-h-24 mx-auto bg-white p-2 rounded-lg border border-slate-700 shadow-md"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={generatePDF}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"
+            >
+              <FileCheck2 className="w-4 h-4" />
+              <span>Download Signed Agreement PDF</span>
+            </button>
+            <button
+              onClick={() => setSigned(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 flex items-center gap-1.5"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Re-draw / Update Signature</span>
+            </button>
           </div>
         </div>
       ) : (
