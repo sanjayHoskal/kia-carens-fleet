@@ -36,7 +36,8 @@ export default function Dashboard() {
   const [resetEmiAmount, setResetEmiAmount] = useState(21000);
 
   useEffect(() => {
-    setCurrentUser(store.getCurrentUser());
+    const user = store.getCurrentUser();
+    if (user) setCurrentUser(user);
     setLoan(store.getLoanState());
     setBookings(store.getBookings());
     setExpenses(store.getExpenses());

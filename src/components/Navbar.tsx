@@ -25,16 +25,26 @@ import { PartnerUser } from '@/lib/types';
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<PartnerUser>('Sanjay P');
+  const [currentUser, setCurrentUser] = useState<PartnerUser | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
-    setCurrentUser(store.getCurrentUser());
+    const syncAuth = () => {
+      setCurrentUser(store.getCurrentUser());
+      setIsLoggedIn(store.isLoggedIn());
+    };
+
+    syncAuth();
+
     const savedTheme = store.getTheme();
     setTheme(savedTheme);
     document.documentElement.classList.remove('dark', 'light');
     document.documentElement.classList.add(savedTheme);
+
+    window.addEventListener('kc_auth_change', syncAuth);
+    return () => window.removeEventListener('kc_auth_change', syncAuth);
   }, []);
 
   const handleSwitchUser = (user: PartnerUser) => {
@@ -46,7 +56,9 @@ export default function Navbar() {
 
   const handleLogout = () => {
     store.logout();
-    store.addAuditLog('User Logged Out', `${currentUser} logged out`);
+    if (currentUser) {
+      store.addAuditLog('User Logged Out', `${currentUser} logged out`);
+    }
     router.push('/login');
   };
 
@@ -60,6 +72,7 @@ export default function Navbar() {
 
   const isLoginPage = pathname === '/login';
   const isSignPage = pathname?.startsWith('/sign/');
+  const showNavControls = isLoggedIn && !isLoginPage && !isSignPage;
 
   const navLinks = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -93,7 +106,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav Links */}
-          {!isLoginPage && !isSignPage && (
+          {showNavControls && (
             <nav className="hidden md:flex items-center space-x-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
@@ -128,7 +141,7 @@ export default function Navbar() {
               {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-500" />}
             </button>
 
-            {!isLoginPage && !isSignPage && (
+            {showNavControls && (
               <>
                 {/* ₹0 Free Badge */}
                 <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/50 text-[11px] font-medium text-emerald-400">
@@ -192,7 +205,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile menu trigger */}
-          {!isLoginPage && !isSignPage && (
+          {showNavControls && (
             <div className="flex md:hidden items-center space-x-2">
               <button
                 onClick={toggleTheme}
@@ -212,7 +225,7 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Drawer */}
-      {mobileMenuOpen && !isLoginPage && !isSignPage && (
+      {mobileMenuOpen && showNavControls && (
         <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 pt-2 pb-4 space-y-2">
           {navLinks.map((link) => {
             const Icon = link.icon;

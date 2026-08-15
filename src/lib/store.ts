@@ -34,24 +34,35 @@ const STORAGE_KEYS = {
 };
 
 export const store = {
-  getCurrentUser(): PartnerUser {
-    if (typeof window === 'undefined') return 'Sanjay P';
-    return (localStorage.getItem(STORAGE_KEYS.CURRENT_USER) as PartnerUser) || 'Sanjay P';
+  getCurrentUser(): PartnerUser | null {
+    if (typeof window === 'undefined') return null;
+    const user = sessionStorage.getItem(STORAGE_KEYS.CURRENT_USER) || localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    return user ? (user as PartnerUser) : null;
+  },
+
+  getActiveUser(): PartnerUser {
+    if (typeof window === 'undefined') return 'Admin';
+    const current = this.getCurrentUser();
+    return current || 'Admin';
   },
 
   setCurrentUser(user: PartnerUser) {
     if (typeof window === 'undefined') return;
+    sessionStorage.setItem(STORAGE_KEYS.CURRENT_USER, user);
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, user);
+    window.dispatchEvent(new Event('kc_auth_change'));
   },
 
   logout() {
     if (typeof window === 'undefined') return;
+    sessionStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    window.dispatchEvent(new Event('kc_auth_change'));
   },
 
   isLoggedIn(): boolean {
-    if (typeof window === 'undefined') return true;
-    return !!localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (typeof window === 'undefined') return false;
+    return !!this.getCurrentUser();
   },
 
   getTheme(): 'dark' | 'light' {
@@ -377,7 +388,7 @@ export const store = {
 
   addAuditLog(action: string, details: string) {
     const current = this.getAuditLogs();
-    const user = this.getCurrentUser();
+    const user = this.getActiveUser();
     const newLog: AuditLog = {
       id: `log-${Date.now().toString().slice(-4)}`,
       userName: user,
@@ -416,7 +427,7 @@ export const store = {
 
     const newLog: AuditLog = {
       id: `log-${Date.now().toString().slice(-4)}`,
-      userName: this.getCurrentUser(),
+      userName: this.getActiveUser(),
       action: 'Factory Reset Executed',
       details: `Factory reset performed. New loan principal set to ₹${customInitialPrincipal.toLocaleString('en-IN')}. All bookings & expenses purged.`,
       createdAt: new Date().toISOString(),

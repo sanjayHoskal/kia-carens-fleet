@@ -75,9 +75,11 @@ export default function BookingsPage() {
 
   useEffect(() => {
     const user = store.getCurrentUser();
-    setCurrentUser(user);
-    if (user === 'Admin') {
-      setUserScope('all');
+    if (user) {
+      setCurrentUser(user);
+      if (user === 'Admin') {
+        setUserScope('all');
+      }
     }
     setBookings(store.getBookings());
     refreshBookingsAsync();

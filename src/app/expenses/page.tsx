@@ -54,9 +54,11 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     const user = store.getCurrentUser();
-    setCurrentUser(user);
+    if (user) {
+      setCurrentUser(user);
+      setFormData((prev) => ({ ...prev, paidBy: user }));
+    }
     setExpenses(store.getExpenses());
-    setFormData((prev) => ({ ...prev, paidBy: user }));
 
     // Async live cloud database fetch
     refreshExpenses();
