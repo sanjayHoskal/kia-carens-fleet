@@ -30,12 +30,63 @@ CREATE TABLE public.loan_settings (
   tenure_months INT NOT NULL DEFAULT 84,
   monthly_emi DECIMAL NOT NULL DEFAULT 21000.00,
   monthly_maintenance_target DECIMAL NOT NULL DEFAULT 5000.00,
+  start_date DATE NOT NULL DEFAULT '2026-08-01',
+  last_deducted_month TEXT NOT NULL DEFAULT '2026-07', -- Format: 'YYYY-MM'. '2026-07' means July deducted, Aug due on 1st.
+  auto_deduct_enabled BOOLEAN NOT NULL DEFAULT true,
+  foreclosure_reserve DECIMAL NOT NULL DEFAULT 0.00,
+  is_foreclosed BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Insert default loan settings row
-INSERT INTO public.loan_settings (id, vehicle_number, vehicle_model, initial_principal, current_principal, tenure_months, monthly_emi, monthly_maintenance_target)
-VALUES ('00000000-0000-0000-0000-000000000001', 'KA09MK6792', 'Kia Carens', 1181000.00, 1181000.00, 84, 21000.00, 5000.00);
+INSERT INTO public.loan_settings (id, vehicle_number, vehicle_model, initial_principal, current_principal, tenure_months, monthly_emi, monthly_maintenance_target, start_date, last_deducted_month, auto_deduct_enabled, foreclosure_reserve, is_foreclosed)
+VALUES ('00000000-0000-0000-0000-000000000001', 'KA09MK6792', 'Kia Carens', 1181000.00, 1181000.00, 84, 21000.00, 5000.00, '2026-08-01', '2026-07', true, 0.00, false);
+
+-- Stored Function: Automated 1st-of-month EMI reduction
+CREATE OR REPLACE FUNCTION public.process_monthly_emi_deduction()
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_loan RECORD;
+  v_current_month TEXT;
+  v_new_principal DECIMAL;
+  v_result jsonb;
+BEGIN
+  SELECT to_char(NOW(), 'YYYY-MM') INTO v_current_month;
+  
+  SELECT * INTO v_loan FROM public.loan_settings WHERE id = '00000000-0000-0000-0000-000000000001';
+  
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Loan settings not found');
+  END IF;
+  
+  IF v_loan.auto_deduct_enabled = false THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Auto deduction is disabled');
+  END IF;
+  
+  IF v_loan.last_deducted_month < v_current_month THEN
+    v_new_principal := GREATEST(0, v_loan.current_principal - v_loan.monthly_emi);
+    
+    UPDATE public.loan_settings
+    SET current_principal = v_new_principal,
+        last_deducted_month = v_current_month,
+        updated_at = NOW()
+    WHERE id = v_loan.id;
+    
+    INSERT INTO public.audit_logs (user_name, action, details)
+    VALUES (
+      'System Cron',
+      'Automated Monthly EMI Deduction',
+      'Deducted monthly EMI of ₹' || v_loan.monthly_emi || ' for ' || v_current_month || '. Remaining principal: ₹' || v_new_principal
+    );
+    
+    RETURN jsonb_build_object('success', true, 'deducted', v_loan.monthly_emi, 'new_principal', v_new_principal, 'month', v_current_month);
+  ELSE
+    RETURN jsonb_build_object('success', true, 'message', 'EMI already processed for ' || v_current_month);
+  END IF;
+END;
+$$;
 
 -- 3. Bookings Table
 CREATE TABLE public.bookings (

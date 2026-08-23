@@ -9,7 +9,23 @@ const INITIAL_LOAN_STATE: LoanState = {
   tenureMonths: 84,
   monthlyEmi: 21000,
   monthlyMaintenanceTarget: 5000,
+  startDate: '2026-08-01',
+  lastDeductedMonth: '2026-07', // July processed, Aug due on 1st
+  autoDeductEnabled: true,
 };
+
+function getCurrentMonthString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function getMonthsDifference(startYearMonth: string, endYearMonth: string): number {
+  const [sy, sm] = startYearMonth.split('-').map(Number);
+  const [ey, em] = endYearMonth.split('-').map(Number);
+  return (ey - sy) * 12 + (em - sm);
+}
 
 const INITIAL_BOOKINGS: Booking[] = [];
 const INITIAL_EXPENSES: Expense[] = [];
@@ -75,18 +91,71 @@ export const store = {
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
   },
 
-  // --- LOAN STATE ---
+  // --- LOAN STATE & AUTOMATED EMI DEDUCTION ---
+  saveLoanState(loanState: LoanState) {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.LOAN, JSON.stringify(loanState));
+    }
+    supabase.from('loan_settings').update({
+      initial_principal: loanState.initialPrincipal,
+      current_principal: loanState.currentPrincipal,
+      tenure_months: loanState.tenureMonths,
+      monthly_emi: loanState.monthlyEmi,
+      monthly_maintenance_target: loanState.monthlyMaintenanceTarget,
+      start_date: loanState.startDate || '2026-08-01',
+      last_deducted_month: loanState.lastDeductedMonth || getCurrentMonthString(),
+      auto_deduct_enabled: loanState.autoDeductEnabled ?? true,
+      foreclosure_reserve: loanState.foreclosureReserve || 0,
+      is_foreclosed: loanState.isForeclosed ?? false,
+      updated_at: new Date().toISOString(),
+    }).eq('id', '00000000-0000-0000-0000-000000000001').then(({ error }) => {
+      if (error) console.error('Supabase save loan state error:', error);
+    });
+  },
+
+  checkAndApplyMonthlyEmiDeduction(loan: LoanState): LoanState {
+    if (loan.autoDeductEnabled === false || loan.isForeclosed) return loan;
+
+    const currentMonth = getCurrentMonthString();
+    const lastMonth = loan.lastDeductedMonth || '2026-07';
+
+    if (lastMonth < currentMonth) {
+      const monthsDiff = getMonthsDifference(lastMonth, currentMonth);
+      if (monthsDiff > 0) {
+        const totalDeduction = monthsDiff * loan.monthlyEmi;
+        const newPrincipal = Math.max(0, loan.currentPrincipal - totalDeduction);
+        
+        const updatedLoan: LoanState = {
+          ...loan,
+          currentPrincipal: newPrincipal,
+          lastDeductedMonth: currentMonth,
+        };
+
+        this.saveLoanState(updatedLoan);
+
+        this.addAuditLog(
+          'Automated 1st-of-Month EMI Reduction',
+          `Automated EMI deduction of ₹${totalDeduction.toLocaleString('en-IN')} applied for ${monthsDiff} month(s) up to ${currentMonth}. Remaining principal updated to ₹${newPrincipal.toLocaleString('en-IN')}.`
+        );
+
+        return updatedLoan;
+      }
+    }
+    return loan;
+  },
+
   getLoanState(): LoanState {
     if (typeof window === 'undefined') return INITIAL_LOAN_STATE;
     const data = localStorage.getItem(STORAGE_KEYS.LOAN);
-    return data ? JSON.parse(data) : INITIAL_LOAN_STATE;
+    const loan: LoanState = data ? JSON.parse(data) : INITIAL_LOAN_STATE;
+    return this.checkAndApplyMonthlyEmiDeduction(loan);
   },
 
   async fetchLoanStateAsync(): Promise<LoanState> {
     try {
       const { data, error } = await supabase.from('loan_settings').select('*').limit(1).single();
       if (data && !error) {
-        const loanState: LoanState = {
+        const rawLoanState: LoanState = {
           vehicleNumber: data.vehicle_number || 'KA09MK6792',
           vehicleModel: data.vehicle_model || 'Kia Carens',
           initialPrincipal: Number(data.initial_principal) || 1181000,
@@ -94,16 +163,109 @@ export const store = {
           tenureMonths: Number(data.tenure_months) || 84,
           monthlyEmi: Number(data.monthly_emi) || 21000,
           monthlyMaintenanceTarget: Number(data.monthly_maintenance_target) || 5000,
+          startDate: data.start_date || '2026-08-01',
+          lastDeductedMonth: data.last_deducted_month || '2026-07',
+          autoDeductEnabled: data.auto_deduct_enabled ?? true,
+          foreclosureReserve: Number(data.foreclosure_reserve) || 0,
+          isForeclosed: data.is_foreclosed ?? false,
         };
+        const updatedLoan = this.checkAndApplyMonthlyEmiDeduction(rawLoanState);
         if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEYS.LOAN, JSON.stringify(loanState));
+          localStorage.setItem(STORAGE_KEYS.LOAN, JSON.stringify(updatedLoan));
         }
-        return loanState;
+        return updatedLoan;
       }
     } catch (err) {
       console.error('Supabase fetch loan error:', err);
     }
     return this.getLoanState();
+  },
+
+  manuallyTriggerEmiDeduction(): LoanState {
+    const loan = this.getLoanState();
+    const currentMonth = getCurrentMonthString();
+    const newPrincipal = Math.max(0, loan.currentPrincipal - loan.monthlyEmi);
+    
+    const updatedLoan: LoanState = {
+      ...loan,
+      currentPrincipal: newPrincipal,
+      lastDeductedMonth: currentMonth,
+    };
+
+    this.saveLoanState(updatedLoan);
+
+    this.addAuditLog(
+      'Manual EMI Payoff Applied',
+      `Manual EMI deduction of ₹${loan.monthlyEmi.toLocaleString('en-IN')} recorded. Remaining loan principal updated to ₹${newPrincipal.toLocaleString('en-IN')}.`
+    );
+
+    return updatedLoan;
+  },
+
+  toggleAutoDeduct(enabled: boolean): LoanState {
+    const loan = this.getLoanState();
+    const updatedLoan: LoanState = {
+      ...loan,
+      autoDeductEnabled: enabled,
+    };
+    this.saveLoanState(updatedLoan);
+    this.addAuditLog(
+      'Updated EMI Settings',
+      `Automated monthly EMI deduction was ${enabled ? 'ENABLED' : 'DISABLED'}.`
+    );
+    return updatedLoan;
+  },
+
+  // --- CARS24 LUMP-SUM FORECLOSURE CALCULATIONS ---
+  getForeclosureMetrics() {
+    const loan = this.getLoanState();
+    const bookings = this.getBookings().filter(b => b.status !== 'Cancelled');
+    const expenses = this.getExpenses();
+
+    const totalGrossRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const emiAllocation = loan.monthlyEmi;
+    const maintenanceAllocation = loan.monthlyMaintenanceTarget;
+
+    const netSurplus = Math.max(0, totalGrossRevenue - (totalExpenses + emiAllocation + maintenanceAllocation));
+    const foreclosureReserve = netSurplus;
+    const remainingGap = Math.max(0, loan.currentPrincipal - foreclosureReserve);
+    const progressPercent = loan.currentPrincipal > 0 
+      ? Math.min(100, Math.round((foreclosureReserve / loan.currentPrincipal) * 100))
+      : 100;
+    const isForeclosureReady = loan.currentPrincipal > 0 && foreclosureReserve >= loan.currentPrincipal;
+
+    return {
+      loan,
+      totalGrossRevenue,
+      totalExpenses,
+      emiAllocation,
+      maintenanceAllocation,
+      foreclosureReserve,
+      remainingGap,
+      progressPercent,
+      isForeclosureReady,
+      isForeclosed: !!loan.isForeclosed,
+    };
+  },
+
+  executeFullLoanForeclosure(): LoanState {
+    const loan = this.getLoanState();
+    const updatedLoan: LoanState = {
+      ...loan,
+      currentPrincipal: 0,
+      isForeclosed: true,
+      foreclosedAt: new Date().toISOString(),
+    };
+
+    this.saveLoanState(updatedLoan);
+
+    this.addAuditLog(
+      'Cars24 Full Loan Foreclosure Executed',
+      `🎉 Cars24 loan principal fully foreclosed & paid off in 1-time lump-sum payment! Loan principal balance set to ₹0. No-Profit Vault unlocked.`
+    );
+
+    return updatedLoan;
   },
 
   // --- BOOKINGS ---
@@ -415,6 +577,7 @@ export const store = {
   },
 
   resetToFreshState(customInitialPrincipal = 1181000, customEmi = 21000, customTenure = 84) {
+    const currentMonth = getCurrentMonthString();
     const newLoanState: LoanState = {
       vehicleNumber: 'KA09MK6792',
       vehicleModel: 'Kia Carens',
@@ -423,13 +586,16 @@ export const store = {
       tenureMonths: customTenure,
       monthlyEmi: customEmi,
       monthlyMaintenanceTarget: 5000,
+      startDate: currentMonth + '-01',
+      lastDeductedMonth: currentMonth,
+      autoDeductEnabled: true,
     };
 
     const newLog: AuditLog = {
       id: `log-${Date.now().toString().slice(-4)}`,
       userName: this.getActiveUser(),
       action: 'Factory Reset Executed',
-      details: `Factory reset performed. New loan principal set to ₹${customInitialPrincipal.toLocaleString('en-IN')}. All bookings & expenses purged.`,
+      details: `Factory reset performed. New loan principal set to ₹${customInitialPrincipal.toLocaleString('en-IN')}. All bookings & expenses purged. Automated 1st-of-month EMI reduction active.`,
       createdAt: new Date().toISOString(),
     };
 
@@ -446,6 +612,9 @@ export const store = {
       initial_principal: customInitialPrincipal,
       current_principal: customInitialPrincipal,
       monthly_emi: customEmi,
+      start_date: currentMonth + '-01',
+      last_deducted_month: currentMonth,
+      auto_deduct_enabled: true,
     }).eq('id', '00000000-0000-0000-0000-000000000001');
   }
 };

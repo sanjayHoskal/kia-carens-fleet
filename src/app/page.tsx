@@ -16,7 +16,11 @@ import {
   Users,
   RotateCcw,
   ShieldAlert,
-  X
+  X,
+  Clock,
+  Check,
+  Settings,
+  Info
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, Expense, LoanState, PartnerUser } from '@/lib/types';
@@ -30,18 +34,33 @@ export default function Dashboard() {
   // Simulator state for revenue
   const [simulatedRevenue, setSimulatedRevenue] = useState<number | null>(null);
 
-  // Factory Reset Modal State
+  // Modals state
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showEmiModal, setShowEmiModal] = useState(false);
+  const [showForeclosureModal, setShowForeclosureModal] = useState(false);
   const [resetLoanAmount, setResetLoanAmount] = useState(1181000);
   const [resetEmiAmount, setResetEmiAmount] = useState(21000);
 
   useEffect(() => {
     const user = store.getCurrentUser();
     if (user) setCurrentUser(user);
-    setLoan(store.getLoanState());
+    const initialLoan = store.getLoanState();
+    setLoan(initialLoan);
     setBookings(store.getBookings());
     setExpenses(store.getExpenses());
+
+    // Fetch async to sync Supabase state and check foreclosure status
+    store.fetchLoanStateAsync().then((updatedLoan) => {
+      setLoan(updatedLoan);
+      const metrics = store.getForeclosureMetrics();
+      if (metrics.isForeclosureReady && !updatedLoan.isForeclosed) {
+        setShowForeclosureModal(true);
+      }
+    });
   }, []);
+
+  // Foreclosure Metrics
+  const foreclosureMetrics = store.getForeclosureMetrics();
 
   // Compute monthly metrics
   const currentMonthBookings = bookings.filter((b) => b.status !== 'Cancelled');
@@ -62,8 +81,10 @@ export default function Dashboard() {
 
   // Amortization metrics
   const clearedPrincipal = loan.initialPrincipal - loan.currentPrincipal;
-  const progressPercent = Math.min(100, Math.round((clearedPrincipal / loan.initialPrincipal) * 100));
-  const remainingMonths = Math.ceil(loan.currentPrincipal / (loan.monthlyEmi || 1));
+  const progressPercent = loan.isForeclosed 
+    ? 100 
+    : Math.min(100, Math.round((clearedPrincipal / loan.initialPrincipal) * 100));
+  const remainingMonths = loan.isForeclosed ? 0 : Math.ceil(loan.currentPrincipal / (loan.monthlyEmi || 1));
 
   // Maintenance wallet balance
   const maintenanceWalletBalance = Math.min(maintenanceTarget, displayRevenue);
@@ -138,19 +159,47 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Loan Balance Card */}
-        <div className="glass-card p-5 rounded-2xl border-slate-800 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-400">Remaining Loan Balance</span>
-            <div className="p-2 rounded-lg bg-sky-950 text-sky-400 border border-sky-800">
-              <IndianRupee className="w-4 h-4" />
+        <div className="glass-card p-5 rounded-2xl border-slate-800 relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-xs font-semibold text-slate-400">Remaining Loan Balance</span>
+              <div className="p-2 rounded-lg bg-sky-950 text-sky-400 border border-sky-800">
+                <IndianRupee className="w-4 h-4" />
+              </div>
             </div>
+            <div className="text-2xl font-bold text-white">
+              ₹{loan.currentPrincipal.toLocaleString('en-IN')}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Original: ₹{loan.initialPrincipal.toLocaleString('en-IN')} ({loan.tenureMonths} Months)
+            </p>
           </div>
-          <div className="text-2xl font-bold text-white">
-            ₹{loan.currentPrincipal.toLocaleString('en-IN')}
+
+          <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              {loan.autoDeductEnabled !== false ? (
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  Auto-EMI Active (1st of Mo)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-400 border border-amber-800 font-semibold">
+                  <AlertTriangle className="w-3 h-3 text-amber-400" />
+                  Auto-EMI Paused
+                </span>
+              )}
+              <button
+                onClick={() => setShowEmiModal(true)}
+                className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 hover:underline"
+              >
+                <span>Manage</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Last Deducted: <span className="text-slate-200 font-semibold">{loan.lastDeductedMonth || 'Aug 2026'}</span> (₹{loan.monthlyEmi.toLocaleString('en-IN')})
+            </p>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Original: ₹{loan.initialPrincipal.toLocaleString('en-IN')} ({loan.tenureMonths} Months)
-          </p>
         </div>
 
         {/* Current Revenue */}
@@ -217,60 +266,117 @@ export default function Dashboard() {
 
       </div>
 
-      {/* CORE FEATURE 1: The "No-Profit" Vault (Lock Feature) */}
-      <div className="glass-card-amber p-6 rounded-2xl relative overflow-hidden border">
+      {/* CORE FEATURE 1: The "No-Profit" Vault & Cars24 Lump-Sum Foreclosure Sinking Fund */}
+      <div className={`p-6 rounded-2xl relative overflow-hidden border ${
+        loan.isForeclosed 
+          ? 'glass-card bg-emerald-950/30 border-emerald-800'
+          : foreclosureMetrics.isForeclosureReady 
+            ? 'glass-card bg-emerald-950/40 border-emerald-500 shadow-2xl shadow-emerald-500/20'
+            : 'glass-card-amber border'
+      }`}>
+        {/* Foreclosure Alert Notification Banner */}
+        {foreclosureMetrics.isForeclosureReady && !loan.isForeclosed && (
+          <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-emerald-950 via-emerald-900 to-sky-950 border border-emerald-500 flex flex-col md:flex-row items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl animate-bounce">🎉</span>
+              <div>
+                <span className="text-sm font-extrabold text-emerald-300 block uppercase tracking-wider">
+                  Cars24 Loan Foreclosure Ready!
+                </span>
+                <p className="text-xs text-emerald-200/90">
+                  Accumulated fleet profits (₹{foreclosureMetrics.foreclosureReserve.toLocaleString('en-IN')}) cover the entire remaining Cars24 loan balance (₹{loan.currentPrincipal.toLocaleString('en-IN')}). You can pay off the loan in full at once!
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to execute full 1-time lump-sum loan foreclosure with Cars24? This will update remaining loan balance to ₹0.')) {
+                  const updated = store.executeFullLoanForeclosure();
+                  setLoan(updated);
+                  alert('🎉 Congratulations! Cars24 loan fully foreclosed and cleared. Profit vault unlocked!');
+                }
+              }}
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/30 flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <CheckCircle2 className="w-4 h-4 text-slate-950" />
+              <span>Execute Cars24 Loan Foreclosure</span>
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-start space-x-3">
-            <div className="p-3 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+            <div className={`p-3 rounded-xl border ${loan.isForeclosed ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' : 'bg-amber-500/20 text-amber-400 border-amber-500/40'}`}>
               <Lock className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-bold text-amber-200">The "No-Profit" Vault</h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
-                  LOCKED
+                <h2 className="text-lg font-bold text-white">The "No-Profit" Vault & Cars24 Foreclosure Fund</h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                  loan.isForeclosed 
+                    ? 'bg-emerald-950 text-emerald-400 border-emerald-800' 
+                    : 'bg-amber-950 text-amber-400 border-amber-800'
+                }`}>
+                  {loan.isForeclosed ? 'UNLOCKED / FORECLOSED' : 'LOCKED FOR FORECLOSURE'}
                 </span>
               </div>
-              <p className="text-xs text-amber-300/80 mt-0.5">
-                Partnership Rule: Profit distribution is strictly disabled until the total ₹{loan.initialPrincipal.toLocaleString('en-IN')} loan principal balance reaches ₹0.
+              <p className="text-xs text-slate-300 mt-0.5">
+                {loan.isForeclosed 
+                  ? 'Cars24 loan principal is ₹0! Full profit distribution between Sanjay P & Sachin is unlocked.'
+                  : `Cars24 Rule: Partial monthly principal payoff (e.g. ₹50k) is not permitted. All net profits accumulate in the Sinking Fund until full lump-sum payoff (₹${loan.currentPrincipal.toLocaleString('en-IN')}) is reached.`}
               </p>
             </div>
           </div>
 
-          {/* Cash Out Button (Visually Disabled) */}
+          {/* Cash Out Button */}
           <div className="relative group">
             <button
-              disabled
-              className="w-full md:w-auto px-5 py-3 rounded-xl bg-slate-800/80 text-slate-500 font-bold text-xs border border-slate-700 cursor-not-allowed flex items-center justify-center space-x-2 opacity-60"
+              disabled={!loan.isForeclosed}
+              onClick={() => {
+                if (loan.isForeclosed) {
+                  alert(`Profit distribution of ₹${foreclosureMetrics.foreclosureReserve.toLocaleString('en-IN')} ready for 50:50 partner payout!`);
+                }
+              }}
+              className={`w-full md:w-auto px-5 py-3 rounded-xl font-bold text-xs border flex items-center justify-center space-x-2 transition-all ${
+                loan.isForeclosed 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-600/30 cursor-pointer' 
+                  : 'bg-slate-800/80 text-slate-500 border-slate-700 cursor-not-allowed opacity-60'
+              }`}
             >
-              <Lock className="w-4 h-4 text-amber-500" />
-              <span>Cash-Out / Profit Distribution (Locked)</span>
+              <Lock className="w-4 h-4" />
+              <span>{loan.isForeclosed ? 'Cash-Out / Profit Distribution' : 'Profit Distribution (Locked)'}</span>
             </button>
-            <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-slate-900 text-amber-300 text-xs rounded-xl shadow-xl border border-amber-900 z-20">
-              <p className="font-semibold text-amber-200 mb-1">🔒 Profit Vault is Locked</p>
-              <p className="text-[11px] leading-relaxed">
-                As per partnership terms for Kia Carens KA09MK6792, all earnings prioritize the ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI and ₹5,000 maintenance fund until the principal is ₹0.
-              </p>
-            </div>
+            {!loan.isForeclosed && (
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-slate-900 text-amber-300 text-xs rounded-xl shadow-xl border border-amber-900 z-20">
+                <p className="font-semibold text-amber-200 mb-1">🔒 Profit Vault Locked for Cars24 Foreclosure</p>
+                <p className="text-[11px] leading-relaxed">
+                  Earnings are retained in the Cars24 Sinking Fund until accumulated profits reach ₹{loan.currentPrincipal.toLocaleString('en-IN')} for 1-time full loan foreclosure.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Amortization Progress Bar */}
+        {/* Cars24 Foreclosure Sinking Fund Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-xs font-semibold">
-            <span className="text-amber-200">Principal Cleared: ₹{clearedPrincipal.toLocaleString('en-IN')} ({progressPercent}%)</span>
-            <span className="text-slate-400">Remaining Loan: ₹{loan.currentPrincipal.toLocaleString('en-IN')} (~{remainingMonths} months)</span>
+            <span className="text-emerald-300">
+              Accumulated Sinking Fund: ₹{foreclosureMetrics.foreclosureReserve.toLocaleString('en-IN')} ({foreclosureMetrics.progressPercent}%)
+            </span>
+            <span className="text-slate-300">
+              Remaining Cars24 Loan: ₹{loan.currentPrincipal.toLocaleString('en-IN')}
+            </span>
           </div>
-          <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-amber-950">
+          <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
             <div
-              className="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-emerald-400 rounded-full transition-all duration-700 shadow-md shadow-amber-500/50"
-              style={{ width: `${progressPercent}%` }}
+              className="h-full bg-gradient-to-r from-sky-500 via-emerald-400 to-emerald-300 rounded-full transition-all duration-700 shadow-md shadow-emerald-500/50"
+              style={{ width: `${foreclosureMetrics.progressPercent}%` }}
             ></div>
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 pt-1">
-            <span>Loan Start: ₹{(loan.initialPrincipal / 100000).toFixed(2)} Lakhs ({loan.tenureMonths} Months)</span>
-            <span>EMI: ₹{loan.monthlyEmi.toLocaleString('en-IN')} / month</span>
-            <span>Goal: ₹0 Principal</span>
+            <span>Loan Start: ₹{(loan.initialPrincipal / 100000).toFixed(2)} Lakhs</span>
+            <span>Gap to Foreclosure: ₹{foreclosureMetrics.remainingGap.toLocaleString('en-IN')}</span>
+            <span>Target: 1-Time Cars24 Lump-Sum Payoff</span>
           </div>
         </div>
       </div>
@@ -536,6 +642,167 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Automated EMI & Amortization Management Modal */}
+      {showEmiModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-xl w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 rounded-lg bg-sky-950 text-sky-400 border border-sky-800">
+                  <Clock className="w-5 h-5 text-sky-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Automated EMI Reduction & Amortization</h3>
+                  <p className="text-xs text-slate-400">1st-of-month automatic loan principal payoff tracking</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEmiModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current EMI Status Card */}
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+              <div>
+                <span className="text-slate-400 block font-medium">Monthly EMI</span>
+                <span className="text-base font-bold text-white font-mono">₹{loan.monthlyEmi.toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Remaining Balance</span>
+                <span className="text-base font-bold text-sky-400 font-mono">₹{loan.currentPrincipal.toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Last Deducted Month</span>
+                <span className="text-xs font-semibold text-slate-200">{loan.lastDeductedMonth || 'Aug 2026'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Schedule Rule</span>
+                <span className="text-xs font-semibold text-emerald-400">Every 1st of Month</span>
+              </div>
+            </div>
+
+            {/* Automation Controls */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Automated Deduction Controls</h4>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-white block">Auto 1st-of-Month EMI Deduction</span>
+                  <p className="text-[11px] text-slate-400">Automatically subtracts ₹{loan.monthlyEmi.toLocaleString('en-IN')} on the 1st of every month</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const newStatus = !loan.autoDeductEnabled;
+                    const updated = store.toggleAutoDeduct(newStatus);
+                    setLoan(updated);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                    loan.autoDeductEnabled !== false
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-800 hover:bg-emerald-900'
+                      : 'bg-rose-950 text-rose-300 border-rose-800 hover:bg-rose-900'
+                  }`}
+                >
+                  {loan.autoDeductEnabled !== false ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-white block">Manual Instant EMI Payoff</span>
+                  <p className="text-[11px] text-slate-400">Immediately deduct ₹{loan.monthlyEmi.toLocaleString('en-IN')} from loan balance now</p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm(`Deduct ₹${loan.monthlyEmi.toLocaleString('en-IN')} from remaining loan balance right now?`)) {
+                      const updated = store.manuallyTriggerEmiDeduction();
+                      setLoan(updated);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/30 flex items-center gap-1"
+                >
+                  <IndianRupee className="w-3.5 h-3.5" />
+                  <span>Deduct Now</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Information Notice */}
+            <div className="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl flex items-start space-x-2 text-xs">
+              <Info className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sky-200/90 leading-relaxed text-[11px]">
+                The app automatically tracks EMI deductions month-by-month. Next automatic deduction will apply on the 1st of next month or when the app is launched in a new month.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex justify-end">
+              <button
+                onClick={() => setShowEmiModal(false)}
+                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cars24 Full Loan Foreclosure Alert Modal */}
+      {showForeclosureModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/80 border border-emerald-500 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl relative text-center">
+            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+              🎉
+            </div>
+
+            <div className="space-y-1">
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-950 text-emerald-300 border border-emerald-800 inline-block uppercase tracking-wider">
+                Cars24 Loan Foreclosure Threshold Met!
+              </span>
+              <h3 className="text-xl font-black text-white">Sufficient Funds to Foreclose Cars24 Loan!</h3>
+              <p className="text-xs text-slate-300">
+                Your accumulated fleet profits from bookings have reached the required amount to clear your remaining Cars24 loan in a single 1-time lump-sum payment.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-950/90 border border-slate-800 text-left text-xs">
+              <div>
+                <span className="text-slate-400 block font-medium">Accumulated Sinking Fund</span>
+                <span className="text-base font-bold text-emerald-400 font-mono">₹{foreclosureMetrics.foreclosureReserve.toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Remaining Cars24 Loan</span>
+                <span className="text-base font-bold text-sky-400 font-mono">₹{loan.currentPrincipal.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  const updated = store.executeFullLoanForeclosure();
+                  setLoan(updated);
+                  setShowForeclosureModal(false);
+                  alert('🎉 Congratulations! Cars24 loan principal is fully foreclosed and cleared. Profit vault unlocked!');
+                }}
+                className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4 text-slate-950" />
+                <span>Execute 1-Time Lump-Sum Cars24 Foreclosure</span>
+              </button>
+
+              <button
+                onClick={() => setShowForeclosureModal(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700"
+              >
+                Remind Me Later
+              </button>
+            </div>
           </div>
         </div>
       )}

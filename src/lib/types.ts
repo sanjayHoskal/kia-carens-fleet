@@ -101,4 +101,10 @@ export interface LoanState {
   tenureMonths: number;
   monthlyEmi: number;
   monthlyMaintenanceTarget: number;
+  startDate?: string;
+  lastDeductedMonth?: string; // 'YYYY-MM'
+  autoDeductEnabled?: boolean;
+  foreclosureReserve?: number;
+  isForeclosed?: boolean;
+  foreclosedAt?: string;
 }

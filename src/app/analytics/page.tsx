@@ -41,10 +41,18 @@ export default function AnalyticsPage() {
   const totalOutflows = totalExpenses + emiAllocation + maintenanceAllocation;
   const netPnL = totalRevenue - totalOutflows;
 
+  // Cars24 Foreclosure Sinking Fund Metrics
+  const foreclosureMetrics = store.getForeclosureMetrics();
+  const foreclosureReserve = Math.max(0, netPnL);
+  const remainingForeclosureGap = Math.max(0, loan.currentPrincipal - foreclosureReserve);
+  const foreclosurePercent = loan.currentPrincipal > 0 
+    ? Math.min(100, Math.round((foreclosureReserve / loan.currentPrincipal) * 100)) 
+    : 100;
+
   // Export P&L Report as CSV
   const exportCSV = () => {
     const rows = [
-      ['Kia Carens (KA09MK6792) Monthly Profit & Loss Statement'],
+      ['Kia Carens (KA09MK6792) Monthly Profit & Loss & Cars24 Foreclosure Statement'],
       ['Generated On', new Date().toLocaleString()],
       [''],
       ['REVENUE BY SOURCE', 'AMOUNT (INR)'],
@@ -53,32 +61,35 @@ export default function AnalyticsPage() {
       ['Private Trip Revenue', privateRevenue],
       ['TOTAL REVENUE', totalRevenue],
       [''],
-      ['EXPENSES & ALLOCATIONS', 'AMOUNT (INR)'],
+      ['EXPENSES & FIXED ALLOCATIONS', 'AMOUNT (INR)'],
       ['Monthly EMI Payoff', emiAllocation],
       ['Maintenance Retention Wallet', maintenanceAllocation],
       ['Fuel & Operational Expenses', totalExpenses],
       ['TOTAL OUTFLOWS', totalOutflows],
       [''],
-      ['NET PARTNERSHIP P&L', netPnL],
+      ['NET PROFIT / SURPLUS', netPnL],
+      ['CARS24 FORECLOSURE SINKING FUND (ACCUMULATED)', foreclosureReserve],
+      ['REMAINING CARS24 FORECLOSURE GAP', remainingForeclosureGap],
+      ['FORECLOSURE STATUS', loan.isForeclosed ? 'FULLY FORECLOSED' : (foreclosureReserve >= loan.currentPrincipal ? 'READY FOR LUMP-SUM FORECLOSURE' : 'ACCUMULATING FUNDS')],
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Kia_Carens_PnL_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Kia_Carens_PnL_Foreclosure_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    store.addAuditLog('Exported CSV Report', 'Downloaded P&L Monthly Financial Statement in CSV format');
+    store.addAuditLog('Exported CSV Report', 'Downloaded P&L & Cars24 Foreclosure Statement in CSV format');
   };
 
   // Export P&L Report as PDF
   const exportPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text('KIA CARENS (KA09MK6792) P&L STATEMENT', 20, 20);
+    doc.text('KIA CARENS (KA09MK6792) P&L & FORECLOSURE STATEMENT', 20, 20);
     doc.setFontSize(10);
     doc.text(`Partners: Sanjay P & Sachin | Generated: ${new Date().toLocaleDateString()}`, 20, 28);
     doc.line(20, 32, 190, 32);
@@ -103,10 +114,16 @@ export default function AnalyticsPage() {
 
     doc.line(20, 118, 190, 118);
     doc.setFontSize(14);
-    doc.text(`NET P&L BALANCE: INR ${netPnL.toLocaleString('en-IN')}`, 20, 128);
+    doc.text('3. Cars24 Lump-Sum Loan Foreclosure Reserve', 20, 128);
+    doc.setFontSize(10);
+    doc.text(`Accumulated Foreclosure Sinking Fund: INR ${foreclosureReserve.toLocaleString('en-IN')}`, 25, 136);
+    doc.text(`Remaining Cars24 Loan Principal: INR ${loan.currentPrincipal.toLocaleString('en-IN')}`, 25, 142);
+    doc.text(`Remaining Foreclosure Gap: INR ${remainingForeclosureGap.toLocaleString('en-IN')}`, 25, 148);
+    doc.setFontSize(12);
+    doc.text(`FORECLOSURE STATUS: ${loan.isForeclosed ? 'FULLY FORECLOSED' : (foreclosureReserve >= loan.currentPrincipal ? 'READY FOR FULL LUMP-SUM PAYOFF' : 'ACCUMULATING RESERVES')}`, 20, 158);
 
-    doc.save(`Kia_Carens_PnL_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
-    store.addAuditLog('Exported PDF Report', 'Downloaded P&L Monthly Financial Statement in PDF format');
+    doc.save(`Kia_Carens_PnL_Foreclosure_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    store.addAuditLog('Exported PDF Report', 'Downloaded P&L & Cars24 Foreclosure Statement in PDF format');
   };
 
   return (
@@ -117,10 +134,10 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-emerald-400" />
-            Joint Analytics & P&L Reports
+            Joint Analytics & Cars24 Foreclosure P&L Reports
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Complete financial transparency between Sanjay P and Sachin. Downloadable monthly CSV/PDF statements.
+            Complete financial transparency between Sanjay P and Sachin. Automatic profit allocation to Cars24 lump-sum loan foreclosure fund.
           </p>
         </div>
 
@@ -174,19 +191,19 @@ export default function AnalyticsPage() {
           <p className="text-xs text-slate-400 mt-1">EMI (₹21k) + Retention (₹5k) + Ops</p>
         </div>
 
-        {/* Net Balance */}
+        {/* Cars24 Foreclosure Sinking Fund */}
         <div className="glass-card p-5 rounded-2xl border-slate-800">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-400">Net Financial Position</span>
+            <span className="text-xs font-semibold text-slate-400">Cars24 Foreclosure Reserve</span>
             <div className="p-2 rounded-lg bg-sky-950 text-sky-400 border border-sky-800">
               <IndianRupee className="w-4 h-4" />
             </div>
           </div>
-          <div className={`text-2xl font-bold ${netPnL >= 0 ? 'text-sky-400' : 'text-amber-400'}`}>
-            ₹{netPnL.toLocaleString('en-IN')}
+          <div className="text-2xl font-bold text-sky-400">
+            ₹{foreclosureReserve.toLocaleString('en-IN')}
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            {netPnL >= 0 ? 'Surplus retained in fleet vault' : 'Deficit split 50:50 between partners'}
+            {remainingForeclosureGap === 0 ? '🎉 100% Ready for Cars24 Foreclosure!' : `₹${remainingForeclosureGap.toLocaleString('en-IN')} remaining gap to full payoff`}
           </p>
         </div>
 
