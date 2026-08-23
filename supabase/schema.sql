@@ -31,7 +31,7 @@ CREATE TABLE public.loan_settings (
   monthly_emi DECIMAL NOT NULL DEFAULT 21000.00,
   monthly_maintenance_target DECIMAL NOT NULL DEFAULT 5000.00,
   start_date DATE NOT NULL DEFAULT '2026-08-01',
-  last_deducted_month TEXT NOT NULL DEFAULT '2026-07', -- Format: 'YYYY-MM'. '2026-07' means July deducted, Aug due on 1st.
+  last_deducted_month TEXT NOT NULL DEFAULT '2026-08', -- Format: 'YYYY-MM'. '2026-08' means August initial, 1st EMI debits on Sep 1st.
   auto_deduct_enabled BOOLEAN NOT NULL DEFAULT true,
   foreclosure_reserve DECIMAL NOT NULL DEFAULT 0.00,
   is_foreclosed BOOLEAN NOT NULL DEFAULT false,
@@ -40,7 +40,7 @@ CREATE TABLE public.loan_settings (
 
 -- Insert default loan settings row
 INSERT INTO public.loan_settings (id, vehicle_number, vehicle_model, initial_principal, current_principal, tenure_months, monthly_emi, monthly_maintenance_target, start_date, last_deducted_month, auto_deduct_enabled, foreclosure_reserve, is_foreclosed)
-VALUES ('00000000-0000-0000-0000-000000000001', 'KA09MK6792', 'Kia Carens', 1181000.00, 1181000.00, 84, 21000.00, 5000.00, '2026-08-01', '2026-07', true, 0.00, false);
+VALUES ('00000000-0000-0000-0000-000000000001', 'KA09MK6792', 'Kia Carens', 1181000.00, 1181000.00, 84, 21000.00, 5000.00, '2026-08-01', '2026-08', true, 0.00, false);
 
 -- Stored Function: Automated 1st-of-month EMI reduction
 CREATE OR REPLACE FUNCTION public.process_monthly_emi_deduction()

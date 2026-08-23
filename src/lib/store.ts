@@ -10,7 +10,7 @@ const INITIAL_LOAN_STATE: LoanState = {
   monthlyEmi: 21000,
   monthlyMaintenanceTarget: 5000,
   startDate: '2026-08-01',
-  lastDeductedMonth: '2026-07', // July processed, Aug due on 1st
+  lastDeductedMonth: '2026-08', // August initial balance (no EMI deducted yet). 1st EMI debits on Sep 1st.
   autoDeductEnabled: true,
 };
 
@@ -103,7 +103,7 @@ export const store = {
       monthly_emi: loanState.monthlyEmi,
       monthly_maintenance_target: loanState.monthlyMaintenanceTarget,
       start_date: loanState.startDate || '2026-08-01',
-      last_deducted_month: loanState.lastDeductedMonth || getCurrentMonthString(),
+      last_deducted_month: loanState.lastDeductedMonth || '2026-08',
       auto_deduct_enabled: loanState.autoDeductEnabled ?? true,
       foreclosure_reserve: loanState.foreclosureReserve || 0,
       is_foreclosed: loanState.isForeclosed ?? false,
@@ -117,7 +117,7 @@ export const store = {
     if (loan.autoDeductEnabled === false || loan.isForeclosed) return loan;
 
     const currentMonth = getCurrentMonthString();
-    const lastMonth = loan.lastDeductedMonth || '2026-07';
+    const lastMonth = loan.lastDeductedMonth || '2026-08';
 
     if (lastMonth < currentMonth) {
       const monthsDiff = getMonthsDifference(lastMonth, currentMonth);
@@ -147,7 +147,18 @@ export const store = {
   getLoanState(): LoanState {
     if (typeof window === 'undefined') return INITIAL_LOAN_STATE;
     const data = localStorage.getItem(STORAGE_KEYS.LOAN);
-    const loan: LoanState = data ? JSON.parse(data) : INITIAL_LOAN_STATE;
+    let loan: LoanState = data ? JSON.parse(data) : INITIAL_LOAN_STATE;
+
+    // Self-healing migration for August 2026 initial state
+    if (loan.lastDeductedMonth === '2026-07') {
+      loan = {
+        ...loan,
+        currentPrincipal: loan.initialPrincipal,
+        lastDeductedMonth: '2026-08',
+      };
+      this.saveLoanState(loan);
+    }
+
     return this.checkAndApplyMonthlyEmiDeduction(loan);
   },
 
@@ -155,7 +166,7 @@ export const store = {
     try {
       const { data, error } = await supabase.from('loan_settings').select('*').limit(1).single();
       if (data && !error) {
-        const rawLoanState: LoanState = {
+        let rawLoanState: LoanState = {
           vehicleNumber: data.vehicle_number || 'KA09MK6792',
           vehicleModel: data.vehicle_model || 'Kia Carens',
           initialPrincipal: Number(data.initial_principal) || 1181000,
@@ -164,11 +175,17 @@ export const store = {
           monthlyEmi: Number(data.monthly_emi) || 21000,
           monthlyMaintenanceTarget: Number(data.monthly_maintenance_target) || 5000,
           startDate: data.start_date || '2026-08-01',
-          lastDeductedMonth: data.last_deducted_month || '2026-07',
+          lastDeductedMonth: data.last_deducted_month || '2026-08',
           autoDeductEnabled: data.auto_deduct_enabled ?? true,
           foreclosureReserve: Number(data.foreclosure_reserve) || 0,
           isForeclosed: data.is_foreclosed ?? false,
         };
+
+        if (rawLoanState.lastDeductedMonth === '2026-07') {
+          rawLoanState.lastDeductedMonth = '2026-08';
+          rawLoanState.currentPrincipal = rawLoanState.initialPrincipal;
+        }
+
         const updatedLoan = this.checkAndApplyMonthlyEmiDeduction(rawLoanState);
         if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEYS.LOAN, JSON.stringify(updatedLoan));
