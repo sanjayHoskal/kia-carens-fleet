@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [showEmiModal, setShowEmiModal] = useState(false);
   const [showForeclosureModal, setShowForeclosureModal] = useState(false);
   const [resetLoanAmount, setResetLoanAmount] = useState(1181000);
-  const [resetEmiAmount, setResetEmiAmount] = useState(21000);
+  const [resetEmiAmount, setResetEmiAmount] = useState(20918);
 
   const loadDataFromCloud = async () => {
     setIsSyncing(true);

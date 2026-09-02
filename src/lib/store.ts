@@ -7,7 +7,7 @@ const INITIAL_LOAN_STATE: LoanState = {
   initialPrincipal: 1181000,
   currentPrincipal: 1181000,
   tenureMonths: 84,
-  monthlyEmi: 21000,
+  monthlyEmi: 20918,
   monthlyMaintenanceTarget: 5000,
   startDate: '2026-08-01',
   lastDeductedMonth: '2026-08', // August initial balance (no EMI deducted yet). 1st EMI debits on Sep 1st.
@@ -183,7 +183,7 @@ export const store = {
           initialPrincipal: Number(data.initial_principal) || 1181000,
           currentPrincipal: Number(data.current_principal) || 1181000,
           tenureMonths: Number(data.tenure_months) || 84,
-          monthlyEmi: Number(data.monthly_emi) || 21000,
+          monthlyEmi: Number(data.monthly_emi) || 20918,
           monthlyMaintenanceTarget: Number(data.monthly_maintenance_target) || 5000,
           startDate: data.start_date || '2026-08-01',
           lastDeductedMonth: data.last_deducted_month || '2026-08',
@@ -705,7 +705,7 @@ export const store = {
     return newLog;
   },
 
-  resetToFreshState(customInitialPrincipal = 1181000, customEmi = 21000, customTenure = 84) {
+  resetToFreshState(customInitialPrincipal = 1181000, customEmi = 20918, customTenure = 84) {
     const currentMonth = getCurrentMonthString();
     const newLoanState: LoanState = {
       vehicleNumber: 'KA09MK6792',
