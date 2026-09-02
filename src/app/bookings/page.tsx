@@ -83,6 +83,12 @@ export default function BookingsPage() {
     }
     setBookings(store.getBookings());
     refreshBookingsAsync();
+
+    const handleSync = () => {
+      setBookings(store.getBookings());
+    };
+    window.addEventListener('kc_data_sync', handleSync);
+    return () => window.removeEventListener('kc_data_sync', handleSync);
   }, []);
 
   const refreshBookingsAsync = async () => {

@@ -19,7 +19,9 @@ import {
   CreditCard,
   X,
   RefreshCw,
-  Trash2
+  Trash2,
+  Search,
+  Filter
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Expense, ExpenseCategory, PartnerUser } from '@/lib/types';
@@ -29,6 +31,8 @@ export default function ExpensesPage() {
   const [currentUser, setCurrentUser] = useState<PartnerUser>('Sanjay P');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<'all' | ExpenseCategory>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // OCR Scanner State
   const [isScanning, setIsScanning] = useState(false);
@@ -62,6 +66,12 @@ export default function ExpensesPage() {
 
     // Async live cloud database fetch
     refreshExpenses();
+
+    const handleSync = () => {
+      setExpenses(store.getExpenses());
+    };
+    window.addEventListener('kc_data_sync', handleSync);
+    return () => window.removeEventListener('kc_data_sync', handleSync);
   }, []);
 
   const refreshExpenses = async () => {
@@ -425,16 +435,57 @@ export default function ExpensesPage() {
 
       {/* Expenses History List */}
       <div className="glass-card p-6 rounded-2xl border-slate-800 space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <h2 className="text-base font-bold text-white">Operational Expenses & Split Ledger</h2>
           <span className="text-sm font-extrabold text-amber-400">
             Total Logged: ₹{totalExpenseAmount.toLocaleString('en-IN')}
           </span>
         </div>
 
-        {expenses.length > 0 ? (
-          <div className="space-y-3">
-            {expenses.map((exp) => {
+        {/* Filter & Search Controls */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search expenses, notes, partner..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+            {(['all', 'Fuel', 'Garage Servicing', 'Tyre Replacement', 'Insurance', 'Other'] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  categoryFilter === cat
+                    ? 'bg-amber-600 text-white shadow'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {cat === 'all' ? 'All' : cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(() => {
+          const filteredExpenses = expenses.filter((exp) => {
+            const matchesCategory = categoryFilter === 'all' || exp.category === categoryFilter;
+            const query = searchQuery.toLowerCase().trim();
+            const matchesSearch = !query || 
+              exp.description.toLowerCase().includes(query) || 
+              exp.category.toLowerCase().includes(query) || 
+              exp.loggedBy.toLowerCase().includes(query);
+            return matchesCategory && matchesSearch;
+          });
+
+          return filteredExpenses.length > 0 ? (
+            <div className="space-y-3">
+              {filteredExpenses.map((exp) => {
               const otherPartner: PartnerUser = exp.loggedBy === 'Sanjay P' ? 'Sachin' : 'Sanjay P';
               return (
                 <div key={exp.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
@@ -514,16 +565,17 @@ export default function ExpensesPage() {
                 </div>
               );
             })}
-          </div>
-        ) : (
-          <div className="p-10 text-center border border-dashed border-slate-800 rounded-xl space-y-2">
-            <Receipt className="w-8 h-8 text-amber-500/40 mx-auto" />
-            <h3 className="text-sm font-bold text-white">No Expenses Logged Yet</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Your operational expense ledger is clean. Use "Scan Receipt with OCR" to snap fuel/service bills or log manually.
-            </p>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="p-10 text-center border border-dashed border-slate-800 rounded-xl space-y-2">
+              <Receipt className="w-8 h-8 text-amber-500/40 mx-auto" />
+              <h3 className="text-sm font-bold text-white">No Expenses Found</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                No operational expense matches your selected category or search filter.
+              </p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* MODAL: Settle Partner Split Payment */}

@@ -20,7 +20,8 @@ import {
   Clock,
   Check,
   Settings,
-  Info
+  Info,
+  RefreshCw
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, Expense, LoanState, PartnerUser } from '@/lib/types';
@@ -30,9 +31,8 @@ export default function Dashboard() {
   const [loan, setLoan] = useState<LoanState>(store.getLoanState());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-
-  // Simulator state for revenue
-  const [simulatedRevenue, setSimulatedRevenue] = useState<number | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>('');
 
   // Modals state
   const [showResetModal, setShowResetModal] = useState(false);
@@ -41,22 +41,44 @@ export default function Dashboard() {
   const [resetLoanAmount, setResetLoanAmount] = useState(1181000);
   const [resetEmiAmount, setResetEmiAmount] = useState(21000);
 
-  useEffect(() => {
+  const loadDataFromCloud = async () => {
+    setIsSyncing(true);
     const user = store.getCurrentUser();
     if (user) setCurrentUser(user);
-    const initialLoan = store.getLoanState();
-    setLoan(initialLoan);
+
+    setLoan(store.getLoanState());
     setBookings(store.getBookings());
     setExpenses(store.getExpenses());
 
-    // Fetch async to sync Supabase state and check foreclosure status
-    store.fetchLoanStateAsync().then((updatedLoan) => {
-      setLoan(updatedLoan);
+    try {
+      const res = await store.fetchAllDataAsync();
+      setLoan(res.loan);
+      setBookings(res.bookings);
+      setExpenses(res.expenses);
+      setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
       const metrics = store.getForeclosureMetrics();
-      if (metrics.isForeclosureReady && !updatedLoan.isForeclosed) {
+      if (metrics.isForeclosureReady && !res.loan.isForeclosed) {
         setShowForeclosureModal(true);
       }
-    });
+    } catch (err) {
+      console.error('Error fetching dashboard cloud data:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDataFromCloud();
+
+    const handleSync = () => {
+      setLoan(store.getLoanState());
+      setBookings(store.getBookings());
+      setExpenses(store.getExpenses());
+    };
+
+    window.addEventListener('kc_data_sync', handleSync);
+    return () => window.removeEventListener('kc_data_sync', handleSync);
   }, []);
 
   // Foreclosure Metrics
@@ -65,8 +87,7 @@ export default function Dashboard() {
   // Compute monthly metrics
   const currentMonthBookings = bookings.filter((b) => b.status !== 'Cancelled');
   const actualMonthlyRevenue = currentMonthBookings.reduce((sum, b) => sum + b.totalAmount, 0);
-  
-  const displayRevenue = simulatedRevenue !== null ? simulatedRevenue : actualMonthlyRevenue;
+  const displayRevenue = actualMonthlyRevenue;
   
   const monthlyExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   
@@ -125,7 +146,15 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+          <button
+            onClick={loadDataFromCloud}
+            disabled={isSyncing}
+            className="px-4 py-2.5 rounded-xl bg-sky-950/90 hover:bg-sky-900 border border-sky-800 text-sky-300 font-semibold text-xs transition-all shadow-md flex items-center space-x-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-sky-400' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : lastSyncedAt ? `Synced (${lastSyncedAt})` : 'Sync Live Cloud'}</span>
+          </button>
           <Link
             href="/bookings"
             className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs transition-all shadow-lg shadow-sky-600/30 flex items-center space-x-2"
@@ -392,41 +421,6 @@ export default function Dashboard() {
             <p className="text-xs text-slate-400">
               Evaluates monthly revenue against ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance target (₹{totalRequiredTarget.toLocaleString('en-IN')} total).
             </p>
-          </div>
-
-          {/* Revenue Scenario Quick Selector */}
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-slate-400 font-medium">Test Revenue:</span>
-            <button
-              onClick={() => setSimulatedRevenue(actualMonthlyRevenue)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${
-                simulatedRevenue === null || simulatedRevenue === actualMonthlyRevenue
-                  ? 'bg-sky-600 border-sky-500 text-white'
-                  : 'bg-slate-900 border-slate-800 text-slate-400'
-              }`}
-            >
-              Actual (₹{actualMonthlyRevenue.toLocaleString('en-IN')})
-            </button>
-            <button
-              onClick={() => setSimulatedRevenue(18000)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${
-                simulatedRevenue === 18000
-                  ? 'bg-sky-600 border-sky-500 text-white'
-                  : 'bg-slate-900 border-slate-800 text-slate-400'
-              }`}
-            >
-              Shortfall (₹18,000)
-            </button>
-            <button
-              onClick={() => setSimulatedRevenue(30000)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${
-                simulatedRevenue === 30000
-                  ? 'bg-sky-600 border-sky-500 text-white'
-                  : 'bg-slate-900 border-slate-800 text-slate-400'
-              }`}
-            >
-              Surplus (₹30,000)
-            </button>
           </div>
         </div>
 

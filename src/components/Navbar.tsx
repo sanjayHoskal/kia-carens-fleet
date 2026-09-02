@@ -17,7 +17,9 @@ import {
   Sun,
   Moon,
   LogOut,
-  Lock
+  Lock,
+  RefreshCw,
+  Cloud
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { PartnerUser } from '@/lib/types';
@@ -29,6 +31,20 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+
+  const handleCloudSync = async () => {
+    setIsSyncing(true);
+    try {
+      await store.fetchAllDataAsync();
+      setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    } catch (e) {
+      console.error('Cloud sync error:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     const syncAuth = () => {
@@ -140,6 +156,19 @@ export default function Navbar() {
             >
               {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-500" />}
             </button>
+
+            {/* Cloud Sync Button */}
+            {showNavControls && (
+              <button
+                onClick={handleCloudSync}
+                disabled={isSyncing}
+                title={lastSyncedTime ? `Last Synced: ${lastSyncedTime}` : 'Sync live data from Supabase'}
+                className="px-2.5 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-400 text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-sky-300' : ''}`} />
+                <span className="hidden md:inline">{isSyncing ? 'Syncing...' : 'Sync Cloud'}</span>
+              </button>
+            )}
 
             {showNavControls && (
               <>

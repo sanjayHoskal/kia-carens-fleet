@@ -9,8 +9,25 @@ export default function AuditPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [filterUser, setFilterUser] = useState<'all' | 'Sanjay P' | 'Sachin'>('all');
 
-  useEffect(() => {
+  const syncAuditLogs = async () => {
     setLogs(store.getAuditLogs());
+    try {
+      const live = await store.fetchAuditLogsAsync();
+      setLogs(live);
+    } catch (e) {
+      console.error('Audit log sync error:', e);
+    }
+  };
+
+  useEffect(() => {
+    syncAuditLogs();
+
+    const handleSync = () => {
+      setLogs(store.getAuditLogs());
+    };
+
+    window.addEventListener('kc_data_sync', handleSync);
+    return () => window.removeEventListener('kc_data_sync', handleSync);
   }, []);
 
   const filteredLogs = logs.filter((log) => {

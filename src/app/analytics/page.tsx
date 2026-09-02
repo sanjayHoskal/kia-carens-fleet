@@ -22,10 +22,32 @@ export default function AnalyticsPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loan, setLoan] = useState<LoanState>(store.getLoanState());
 
-  useEffect(() => {
+  const syncData = async () => {
     setBookings(store.getBookings());
     setExpenses(store.getExpenses());
     setLoan(store.getLoanState());
+
+    try {
+      const res = await store.fetchAllDataAsync();
+      setBookings(res.bookings);
+      setExpenses(res.expenses);
+      setLoan(res.loan);
+    } catch (e) {
+      console.error('Analytics cloud sync error:', e);
+    }
+  };
+
+  useEffect(() => {
+    syncData();
+
+    const handleSync = () => {
+      setBookings(store.getBookings());
+      setExpenses(store.getExpenses());
+      setLoan(store.getLoanState());
+    };
+
+    window.addEventListener('kc_data_sync', handleSync);
+    return () => window.removeEventListener('kc_data_sync', handleSync);
   }, []);
 
   // Compute revenue by source

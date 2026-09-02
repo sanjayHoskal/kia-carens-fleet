@@ -633,5 +633,20 @@ export const store = {
       last_deducted_month: currentMonth,
       auto_deduct_enabled: true,
     }).eq('id', '00000000-0000-0000-0000-000000000001');
+  },
+
+  async fetchAllDataAsync(): Promise<{ loan: LoanState; bookings: Booking[]; expenses: Expense[]; auditLogs: AuditLog[] }> {
+    const [loan, bookings, expenses, auditLogs] = await Promise.all([
+      this.fetchLoanStateAsync(),
+      this.fetchBookingsAsync(),
+      this.fetchExpensesAsync(),
+      this.fetchAuditLogsAsync(),
+    ]);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('kc_data_sync'));
+    }
+
+    return { loan, bookings, expenses, auditLogs };
   }
 };
