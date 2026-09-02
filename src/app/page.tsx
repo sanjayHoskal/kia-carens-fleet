@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string>('');
+  const [syncToast, setSyncToast] = useState<string>('');
 
   // Modals state
   const [showResetModal, setShowResetModal] = useState(false);
@@ -43,6 +44,7 @@ export default function Dashboard() {
 
   const loadDataFromCloud = async () => {
     setIsSyncing(true);
+    const startTime = Date.now();
     const user = store.getCurrentUser();
     if (user) setCurrentUser(user);
 
@@ -55,7 +57,12 @@ export default function Dashboard() {
       setLoan(res.loan);
       setBookings(res.bookings);
       setExpenses(res.expenses);
-      setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastSyncedAt(timeStr);
+
+      const totalExpSum = res.expenses.reduce((sum, e) => sum + e.amount, 0);
+      setSyncToast(`Live Cloud Synced! Loaded ${res.expenses.length} spendings (₹${totalExpSum.toLocaleString('en-IN')}) & ${res.bookings.length} bookings.`);
+      setTimeout(() => setSyncToast(''), 5000);
 
       const metrics = store.getForeclosureMetrics();
       if (metrics.isForeclosureReady && !res.loan.isForeclosed) {
@@ -64,6 +71,10 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Error fetching dashboard cloud data:', err);
     } finally {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 600) {
+        await new Promise((r) => setTimeout(r, 600 - elapsed));
+      }
       setIsSyncing(false);
     }
   };
@@ -91,13 +102,14 @@ export default function Dashboard() {
   
   const monthlyExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   
-  // Rule: Target = ₹21,000 EMI + ₹5,000 Maintenance Retention
+  // Rule: Target = ₹21,000 EMI + ₹5,000 Maintenance Retention + Logged Operational Expenses
   const emiAmount = loan.monthlyEmi;
   const maintenanceTarget = loan.monthlyMaintenanceTarget;
-  const totalRequiredTarget = emiAmount + maintenanceTarget; // ₹26,000
+  const totalFixedTarget = emiAmount + maintenanceTarget; // ₹26,000
+  const totalOutflows = monthlyExpenses + totalFixedTarget;
 
-  // Deficit calculation
-  const deficit = Math.max(0, totalRequiredTarget - displayRevenue);
+  // Deficit calculation incorporating operational spendings
+  const deficit = Math.max(0, totalOutflows - displayRevenue);
   const partnerSplit = Math.ceil(deficit / 2);
 
   // Amortization metrics
@@ -184,8 +196,21 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Sync Toast Notification */}
+      {syncToast && (
+        <div className="p-3.5 rounded-xl bg-sky-950/90 border border-sky-600/80 text-sky-200 text-xs font-semibold flex items-center justify-between shadow-lg animate-fade-in">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{syncToast}</span>
+          </div>
+          <button onClick={() => setSyncToast('')} className="text-sky-400 hover:text-white font-bold ml-4">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Grid Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         
         {/* Loan Balance Card */}
         <div className="glass-card p-5 rounded-2xl border-slate-800 relative overflow-hidden flex flex-col justify-between">
@@ -232,33 +257,56 @@ export default function Dashboard() {
         </div>
 
         {/* Current Revenue */}
-        <div className="glass-card p-5 rounded-2xl border-slate-800">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-400">Monthly Fleet Revenue</span>
-            <div className="p-2 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800">
-              <TrendingUp className="w-4 h-4" />
+        <div className="glass-card p-5 rounded-2xl border-slate-800 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-xs font-semibold text-slate-400">Monthly Fleet Revenue</span>
+              <div className="p-2 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-emerald-400">
+              ₹{actualMonthlyRevenue.toLocaleString('en-IN')}
             </div>
           </div>
-          <div className="text-2xl font-bold text-emerald-400">
-            ₹{actualMonthlyRevenue.toLocaleString('en-IN')}
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-400 mt-2">
             {currentMonthBookings.length} Bookings logged
           </p>
         </div>
 
-        {/* Maintenance Wallet */}
-        <div className="glass-card p-5 rounded-2xl border-slate-800">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-400">Maintenance Retention Wallet</span>
-            <div className="p-2 rounded-lg bg-amber-950 text-amber-400 border border-amber-800">
-              <Wallet className="w-4 h-4" />
+        {/* Operational Spendings & Repairs Card */}
+        <div className="glass-card p-5 rounded-2xl border-slate-800 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-xs font-semibold text-slate-400">Operational Spendings</span>
+              <div className="p-2 rounded-lg bg-rose-950 text-rose-400 border border-rose-800">
+                <Receipt className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-rose-400">
+              ₹{monthlyExpenses.toLocaleString('en-IN')}
             </div>
           </div>
-          <div className="text-2xl font-bold text-amber-400">
-            ₹{maintenanceWalletBalance.toLocaleString('en-IN')}
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80">
+            <span className="text-xs text-slate-400">{expenses.length} Bills Logged</span>
+            <Link href="/expenses" className="text-[11px] text-sky-400 hover:underline font-semibold">View All</Link>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+        </div>
+
+        {/* Maintenance Wallet */}
+        <div className="glass-card p-5 rounded-2xl border-slate-800 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-xs font-semibold text-slate-400">Maintenance Retention</span>
+              <div className="p-2 rounded-lg bg-amber-950 text-amber-400 border border-amber-800">
+                <Wallet className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-amber-400">
+              ₹{maintenanceWalletBalance.toLocaleString('en-IN')}
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
             Target: ₹5,000 monthly auto-retention
           </p>
         </div>
@@ -419,24 +467,34 @@ export default function Dashboard() {
               50:50 Out-of-Pocket Split Calculator
             </h2>
             <p className="text-xs text-slate-400">
-              Evaluates monthly revenue against ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance target (₹{totalRequiredTarget.toLocaleString('en-IN')} total).
+              Evaluates monthly revenue against logged spendings (₹{monthlyExpenses.toLocaleString('en-IN')}) + ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance target (Total Outflows: ₹{totalOutflows.toLocaleString('en-IN')}).
             </p>
           </div>
         </div>
 
         {/* Calculation Breakdown Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1">Monthly Fleet Revenue</span>
-            <span className="text-xl font-bold text-emerald-400">
+            <span className="text-xs text-slate-400 block mb-1 font-semibold">Monthly Fleet Revenue</span>
+            <span className="text-xl font-bold text-emerald-400 font-mono">
               ₹{displayRevenue.toLocaleString('en-IN')}
             </span>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1">Total Target (EMI + Retention)</span>
-            <span className="text-xl font-bold text-slate-200">
-              ₹{totalRequiredTarget.toLocaleString('en-IN')}
+            <span className="text-xs text-slate-400 block mb-1 font-semibold">Logged Operational Spendings</span>
+            <span className="text-xl font-bold text-rose-400 font-mono">
+              ₹{monthlyExpenses.toLocaleString('en-IN')}
+            </span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">
+              ({expenses.length} bills logged)
+            </span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-xs text-slate-400 block mb-1 font-semibold">Fixed Targets (EMI + Retention)</span>
+            <span className="text-xl font-bold text-slate-200 font-mono">
+              ₹{totalFixedTarget.toLocaleString('en-IN')}
             </span>
             <span className="text-[10px] text-slate-400 block mt-0.5">
               (₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance)
@@ -444,8 +502,8 @@ export default function Dashboard() {
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1">Net Deficit / Shortfall</span>
-            <span className={`text-xl font-bold ${deficit > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+            <span className="text-xs text-slate-400 block mb-1 font-semibold font-mono">Net Deficit / Out-of-Pocket</span>
+            <span className={`text-xl font-bold font-mono ${deficit > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
               ₹{deficit.toLocaleString('en-IN')}
             </span>
           </div>
