@@ -14,6 +14,17 @@ const INITIAL_LOAN_STATE: LoanState = {
   autoDeductEnabled: true,
 };
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 function getCurrentMonthString(): string {
   const d = new Date();
   const year = d.getFullYear();
@@ -293,10 +304,11 @@ export const store = {
   },
 
   async fetchBookingsAsync(): Promise<Booking[]> {
+    const local = this.getBookings();
     try {
       const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
       if (data && !error) {
-        const formatted: Booking[] = data.map((b: any) => ({
+        const cloudFormatted: Booking[] = data.map((b: any) => ({
           id: b.id,
           guestName: b.guest_name,
           guestPhone: b.guest_phone,
@@ -315,22 +327,66 @@ export const store = {
           createdBy: b.created_by,
           createdAt: b.created_at,
         }));
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(formatted));
+
+        // Push any local items not found in cloud up to Supabase
+        const unsyncedLocal = local.filter(
+          (l) => !cloudFormatted.some((c) => c.id === l.id || (c.guestName === l.guestName && Math.abs(c.totalAmount - l.totalAmount) < 0.01))
+        );
+
+        if (unsyncedLocal.length > 0) {
+          for (const item of unsyncedLocal) {
+            const validId = (item.id.length === 36 && item.id.includes('-')) ? item.id : generateUUID();
+            const payload = {
+              id: validId,
+              guest_name: item.guestName,
+              guest_phone: item.guestPhone,
+              guest_aadhaar: item.guestAadhaar,
+              guest_dl: item.guestDl,
+              source: item.source,
+              start_date: item.startDate,
+              end_date: item.endDate,
+              daily_rate: item.dailyRate,
+              total_amount: item.totalAmount,
+              status: item.status,
+              signature_url: item.signatureUrl,
+              signed_agreement_url: item.signedAgreementUrl,
+              pre_inspection: item.preInspection,
+              post_inspection: item.postInspection,
+              created_by: item.createdBy,
+              created_at: item.createdAt,
+            };
+            const { error: insErr } = await supabase.from('bookings').upsert([payload]);
+            if (!insErr) {
+              item.id = validId;
+              cloudFormatted.unshift(item);
+            }
+          }
         }
-        return formatted;
+
+        const mergedMap = new Map<string, Booking>();
+        [...cloudFormatted, ...local].forEach((item) => {
+          if (!mergedMap.has(item.id)) {
+            mergedMap.set(item.id, item);
+          }
+        });
+        const mergedList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(mergedList));
+        }
+        return mergedList;
       }
     } catch (err) {
       console.error('Supabase fetch bookings error:', err);
     }
-    return this.getBookings();
+    return local;
   },
 
   addBooking(booking: Omit<Booking, 'id' | 'createdAt'>): Booking {
     const current = this.getBookings();
     const newBooking: Booking = {
       ...booking,
-      id: `bk-${Date.now().toString().slice(-4)}`,
+      id: generateUUID(),
       createdAt: new Date().toISOString(),
     };
     const updated = [newBooking, ...current];
@@ -416,10 +472,11 @@ export const store = {
   },
 
   async fetchExpensesAsync(): Promise<Expense[]> {
+    const local = this.getExpenses();
     try {
       const { data, error } = await supabase.from('expenses').select('*').order('created_at', { ascending: false });
       if (data && !error) {
-        const formatted: Expense[] = data.map((e: any) => ({
+        const cloudFormatted: Expense[] = data.map((e: any) => ({
           id: e.id,
           category: e.category,
           amount: Number(e.amount),
@@ -435,22 +492,63 @@ export const store = {
           settledBy: e.settled_by,
           createdAt: e.created_at,
         }));
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(formatted));
+
+        // Push any local expenses NOT found in cloud up to Supabase
+        const unsyncedLocal = local.filter(
+          (l) => !cloudFormatted.some((c) => c.id === l.id || (c.description === l.description && Math.abs(c.amount - l.amount) < 0.01))
+        );
+
+        if (unsyncedLocal.length > 0) {
+          for (const item of unsyncedLocal) {
+            const validId = (item.id.length === 36 && item.id.includes('-')) ? item.id : generateUUID();
+            const payload = {
+              id: validId,
+              category: item.category,
+              amount: item.amount,
+              description: item.description,
+              bill_photo_url: item.billPhotoUrl,
+              ocr_extracted_data: item.ocrExtractedData,
+              logged_by: item.loggedBy,
+              is_split: item.isSplit,
+              split_amount: item.splitAmount,
+              settled_status: item.settledStatus || 'Pending',
+              settlement_mode: item.settlementMode,
+              settled_at: item.settledAt,
+              settled_by: item.settledBy,
+              created_at: item.createdAt,
+            };
+            const { error: insErr } = await supabase.from('expenses').upsert([payload]);
+            if (!insErr) {
+              item.id = validId;
+              cloudFormatted.unshift(item);
+            }
+          }
         }
-        return formatted;
+
+        const mergedMap = new Map<string, Expense>();
+        [...cloudFormatted, ...local].forEach((item) => {
+          if (!mergedMap.has(item.id)) {
+            mergedMap.set(item.id, item);
+          }
+        });
+        const mergedList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(mergedList));
+        }
+        return mergedList;
       }
     } catch (err) {
       console.error('Supabase fetch expenses error:', err);
     }
-    return this.getExpenses();
+    return local;
   },
 
   addExpense(expense: Omit<Expense, 'id' | 'createdAt'>): Expense {
     const current = this.getExpenses();
     const newExpense: Expense = {
       ...expense,
-      id: `exp-${Date.now().toString().slice(-4)}`,
+      id: generateUUID(),
       createdAt: new Date().toISOString(),
     };
     const updated = [newExpense, ...current];
