@@ -444,7 +444,7 @@ export const store = {
     return updatedItem;
   },
 
-  deleteBooking(id: string): boolean {
+  async deleteBooking(id: string): Promise<boolean> {
     const current = this.getBookings();
     const target = current.find((item) => item.id === id);
     const updatedList = current.filter((item) => item.id !== id);
@@ -453,12 +453,19 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updatedList));
     }
 
-    supabase.from('bookings').delete().eq('id', id).then(({ error }) => {
+    try {
+      const { error } = await supabase.from('bookings').delete().eq('id', id);
       if (error) console.error('Supabase delete booking error:', error);
-    });
+    } catch (e) {
+      console.error('Supabase delete booking exception:', e);
+    }
 
     if (target) {
       this.addAuditLog('Deleted Booking', `Deleted booking ${target.id} for guest ${target.guestName} (₹${target.totalAmount.toLocaleString('en-IN')})`);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('kc_data_sync'));
     }
 
     return true;
@@ -614,7 +621,7 @@ export const store = {
     return updatedItem;
   },
 
-  deleteExpense(id: string): boolean {
+  async deleteExpense(id: string): Promise<boolean> {
     const current = this.getExpenses();
     const target = current.find((item) => item.id === id);
     const updatedList = current.filter((item) => item.id !== id);
@@ -623,12 +630,19 @@ export const store = {
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(updatedList));
     }
 
-    supabase.from('expenses').delete().eq('id', id).then(({ error }) => {
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', id);
       if (error) console.error('Supabase delete expense error:', error);
-    });
+    } catch (e) {
+      console.error('Supabase delete expense exception:', e);
+    }
 
     if (target) {
       this.addAuditLog('Deleted Expense', `Deleted ${target.category} expense of ₹${target.amount.toLocaleString('en-IN')} (${target.description})`);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('kc_data_sync'));
     }
 
     return true;

@@ -193,10 +193,12 @@ export default function ExpensesPage() {
     setSettleModalExpense(null);
   };
 
-  const handleDeleteExpense = (id: string, description: string) => {
+  const handleDeleteExpense = async (id: string, description: string) => {
     if (confirm(`Are you sure you want to delete expense "${description}"?`)) {
-      store.deleteExpense(id);
-      refreshExpenses();
+      setIsRefreshing(true);
+      await store.deleteExpense(id);
+      await refreshExpenses();
+      setIsRefreshing(false);
     }
   };
 

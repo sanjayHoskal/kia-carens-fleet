@@ -100,10 +100,10 @@ export default function BookingsPage() {
     setBookings(store.getBookings());
   };
 
-  const handleDeleteBooking = (id: string, guestName: string) => {
+  const handleDeleteBooking = async (id: string, guestName: string) => {
     if (confirm(`Are you sure you want to delete booking "${id}" for guest ${guestName}?`)) {
-      store.deleteBooking(id);
-      refreshBookings();
+      await store.deleteBooking(id);
+      await refreshBookingsAsync();
     }
   };
 
