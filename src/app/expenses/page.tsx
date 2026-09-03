@@ -248,8 +248,8 @@ export default function ExpensesPage() {
           <div className="text-right">
             <span className="text-xs text-amber-300 block font-semibold">Net Partner Balance</span>
             <span className="text-lg font-black text-white">
-              {netBalance > 0 ? `Sachin owes Sanjay P ₹${netBalance.toLocaleString('en-IN')}` :
-               netBalance < 0 ? `Sanjay P owes Sachin ₹${Math.abs(netBalance).toLocaleString('en-IN')}` :
+              {netBalance > 0 ? `Sachin V owes Sanjay P ₹${netBalance.toLocaleString('en-IN')}` :
+               netBalance < 0 ? `Sanjay P owes Sachin V ₹${Math.abs(netBalance).toLocaleString('en-IN')}` :
                'All Partner Expenses Settled!'}
             </span>
           </div>
@@ -257,14 +257,14 @@ export default function ExpensesPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1 font-semibold">Sachin Owes Sanjay P</span>
+            <span className="text-slate-400 block mb-1 font-semibold">Sachin V Owes Sanjay P</span>
             <span className="text-base font-bold text-emerald-400 font-mono">
               ₹{sachinOwesSanjay.toLocaleString('en-IN')}
             </span>
           </div>
 
           <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1 font-semibold">Sanjay P Owes Sachin</span>
+            <span className="text-slate-400 block mb-1 font-semibold">Sanjay P Owes Sachin V</span>
             <span className="text-base font-bold text-sky-400 font-mono">
               ₹{sanjayOwesSachin.toLocaleString('en-IN')}
             </span>
@@ -415,7 +415,7 @@ export default function ExpensesPage() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-semibold"
                   >
                     <option value="Sanjay P">Sanjay P</option>
-                    <option value="Sachin">Sachin</option>
+                    <option value="Sachin V">Sachin V</option>
                   </select>
                 </div>
 
@@ -525,7 +525,8 @@ export default function ExpensesPage() {
           return filteredExpenses.length > 0 ? (
             <div className="space-y-3">
               {filteredExpenses.map((exp) => {
-              const otherPartner: PartnerUser = exp.loggedBy === 'Sanjay P' ? 'Sachin' : 'Sanjay P';
+              const isSanjay = exp.loggedBy === 'Sanjay P';
+              const otherPartner: string = isSanjay ? 'Sachin V' : 'Sanjay P';
               return (
                 <div key={exp.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
                   

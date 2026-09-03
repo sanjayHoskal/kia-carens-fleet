@@ -117,7 +117,7 @@ export default function AnalyticsPage() {
     doc.setFontSize(18);
     doc.text('KIA CARENS (KA09MK6792) P&L & FORECLOSURE STATEMENT', 20, 20);
     doc.setFontSize(10);
-    doc.text(`Partners: Sanjay P & Sachin | Generated: ${new Date().toLocaleDateString()}`, 20, 28);
+    doc.text(`Partners: Sanjay P & Sachin V | Generated: ${new Date().toLocaleDateString()}`, 20, 28);
     doc.line(20, 32, 190, 32);
 
     doc.setFontSize(14);
@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
             Joint Analytics & Cars24 Foreclosure P&L Reports
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Complete financial transparency between Sanjay P and Sachin. Automatic profit allocation to Cars24 lump-sum loan foreclosure fund.
+            Complete financial transparency between Sanjay P and Sachin V. Automatic profit allocation to Cars24 lump-sum loan foreclosure fund.
           </p>
         </div>
 

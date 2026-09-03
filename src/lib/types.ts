@@ -1,4 +1,4 @@
-export type PartnerUser = 'Sanjay P' | 'Sachin' | 'Admin';
+export type PartnerUser = 'Sanjay P' | 'Sachin V' | 'Sachin' | 'Admin';
 
 export type BookingSource = 'Zoomcar' | 'Retail Dealer' | 'Private Trip';
 

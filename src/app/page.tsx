@@ -151,7 +151,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       
       {/* Top Banner / Welcome */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between glass-card p-6 rounded-2xl border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-sky-950/40">
+      <div className="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-sky-950 shadow-lg">
         <div className="space-y-1 mb-4 md:mb-0">
           <div className="flex items-center space-x-2">
             <span className="text-xs px-2.5 py-1 rounded-md bg-sky-950 text-sky-400 border border-sky-800 font-semibold">
@@ -392,7 +392,7 @@ export default function Dashboard() {
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
                 {loan.isForeclosed 
-                  ? 'Cars24 loan principal is ₹0! Full profit distribution between Sanjay P & Sachin is unlocked.'
+                  ? 'Cars24 loan principal is ₹0! Full profit distribution between Sanjay P & Sachin V is unlocked.'
                   : `Cars24 Rule: Partial monthly principal payoff (e.g. ₹50k) is not permitted. All net profits accumulate in the Sinking Fund until full lump-sum payoff (₹${loan.currentPrincipal.toLocaleString('en-IN')}) is reached.`}
               </p>
             </div>
@@ -615,7 +615,7 @@ export default function Dashboard() {
       {/* Automated EMI & Amortization Management Modal */}
       {showEmiModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-xl w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="glass-card bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-xl w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
                 <div className="p-2 rounded-lg bg-sky-950 text-sky-400 border border-sky-800">

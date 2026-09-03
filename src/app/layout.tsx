@@ -25,7 +25,7 @@ export default function RootLayout({
             </AuthGuard>
           </main>
           <footer className="border-t border-slate-900 bg-slate-950/60 py-4 text-center text-xs text-slate-400">
-            <p>Kia Carens (KA09MK6792) Partnership Platform • Built for Sanjay P & Sachin • 100% Free Tier Architecture</p>
+            <p>Kia Carens (KA09MK6792) Partnership Platform • Built for Sanjay P & Sachin V • 100% Free Tier Architecture</p>
           </footer>
         </RealtimeProvider>
       </body>

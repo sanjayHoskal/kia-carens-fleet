@@ -166,7 +166,7 @@ export default function BookingsPage() {
     doc.setFontSize(11);
     doc.text(`Booking Reference: ${booking.id}`, 20, 32);
     doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 20, 38);
-    doc.text(`Lessor / Partners: Sanjay P & Sachin`, 20, 44);
+    doc.text(`Lessor / Partners: Sanjay P & Sachin V`, 20, 44);
 
     doc.line(20, 48, 190, 48);
 
@@ -197,7 +197,7 @@ export default function BookingsPage() {
 
     doc.line(20, 180, 190, 180);
     doc.setFontSize(10);
-    doc.text('Lessor Signature: Sanjay P / Sachin', 25, 195);
+    doc.text('Lessor Signature: Sanjay P / Sachin V', 25, 195);
     
     if (booking.signatureUrl) {
       doc.text('Guest Digital Signature (Verified):', 110, 188);
