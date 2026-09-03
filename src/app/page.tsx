@@ -21,7 +21,8 @@ import {
   Check,
   Settings,
   Info,
-  RefreshCw
+  RefreshCw,
+  Landmark
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, Expense, LoanState, PartnerUser } from '@/lib/types';
@@ -114,11 +115,9 @@ export default function Dashboard() {
   });
   const monthlyExpenses = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   
-  // Rule: Target = ₹21,000 EMI + ₹5,000 Maintenance Retention + Current Month's Operational Expenses
+  // Target = ₹21,000 Monthly EMI + Current Month's Operational Expenses
   const emiAmount = loan.monthlyEmi;
-  const maintenanceTarget = loan.monthlyMaintenanceTarget;
-  const totalFixedTarget = emiAmount + maintenanceTarget; // ₹26,000
-  const totalOutflows = monthlyExpenses + totalFixedTarget;
+  const totalOutflows = monthlyExpenses + emiAmount;
 
   // Deficit calculation — current month only
   const deficit = Math.max(0, totalOutflows - displayRevenue);
@@ -133,9 +132,6 @@ export default function Dashboard() {
     ? 100 
     : Math.min(100, Math.round((clearedPrincipal / loan.initialPrincipal) * 100));
   const remainingMonths = loan.isForeclosed ? 0 : Math.ceil(loan.currentPrincipal / (loan.monthlyEmi || 1));
-
-  // Maintenance wallet balance
-  const maintenanceWalletBalance = Math.min(maintenanceTarget, displayRevenue);
 
   const activeBooking = bookings.find((b) => b.status === 'Active');
 
@@ -191,10 +187,10 @@ export default function Dashboard() {
           </Link>
           <Link
             href="/expenses"
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all border border-slate-700 flex items-center space-x-2"
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-all border border-slate-600 flex items-center space-x-2 shadow-sm"
           >
-            <Receipt className="w-4 h-4" />
-            <span>Scan Receipt (OCR)</span>
+            <Receipt className="w-4 h-4 text-amber-400" />
+            <span className="text-white">Scan Receipt (OCR)</span>
           </Link>
           <button
             onClick={() => {
@@ -225,7 +221,7 @@ export default function Dashboard() {
       )}
 
       {/* Grid Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Loan Balance Card */}
         <div className="glass-card p-5 rounded-2xl border-slate-800 relative overflow-hidden flex flex-col justify-between">
@@ -306,24 +302,6 @@ export default function Dashboard() {
             <span className="text-xs text-slate-400">{currentMonthExpenses.length} Bills This Month</span>
             <Link href="/expenses" className="text-[11px] text-sky-400 hover:underline font-semibold">View All</Link>
           </div>
-        </div>
-
-        {/* Maintenance Wallet */}
-        <div className="glass-card p-5 rounded-2xl border-slate-800 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-semibold text-slate-400">Maintenance Retention</span>
-              <div className="p-2 rounded-lg bg-amber-950 text-amber-400 border border-amber-800">
-                <Wallet className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-amber-400">
-              ₹{maintenanceWalletBalance.toLocaleString('en-IN')}
-            </div>
-          </div>
-          <p className="text-xs text-slate-400 mt-2">
-            Target: ₹5,000 monthly auto-retention
-          </p>
         </div>
 
         {/* Vehicle Fleet Status */}
@@ -462,7 +440,11 @@ export default function Dashboard() {
           <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
             <div
               className="h-full bg-gradient-to-r from-sky-500 via-emerald-400 to-emerald-300 rounded-full transition-all duration-700 shadow-md shadow-emerald-500/50"
-              style={{ width: `${foreclosureMetrics.progressPercent}%` }}
+              style={{
+                width: foreclosureMetrics.foreclosureReserve > 0 
+                  ? `${Math.max(2, foreclosureMetrics.progressPercent)}%` 
+                  : '0%'
+              }}
             ></div>
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 pt-1">
@@ -522,30 +504,30 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Financial Retention Flow Card */}
+        {/* Cars24 Sinking Fund Flow Card */}
         <div className="glass-card p-5 rounded-2xl border-slate-800 space-y-4">
           <h3 className="font-bold text-white text-base flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-amber-400" />
-            ₹5,000 Maintenance Retention Flow
+            <Landmark className="w-4 h-4 text-emerald-400" />
+            Cars24 Sinking Fund Flow
           </h3>
           
           <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3 text-xs">
             <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-              <span className="text-slate-400">Step 1: Fleet Revenue Generated</span>
-              <span className="font-bold text-emerald-400">₹{actualMonthlyRevenue.toLocaleString('en-IN')}</span>
+              <span className="text-slate-400">Total Fleet Bookings Revenue</span>
+              <span className="font-bold text-emerald-400">₹{foreclosureMetrics.totalGrossRevenue.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-              <span className="text-amber-300 font-medium">Step 2: Auto Retention to Wallet</span>
-              <span className="font-bold text-amber-400">₹{maintenanceWalletBalance.toLocaleString('en-IN')}</span>
+              <span className="text-sky-300 font-medium">100% Directed to Sinking Fund</span>
+              <span className="font-bold text-sky-400">₹{foreclosureMetrics.foreclosureReserve.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sky-300 font-medium">Step 3: Available for EMI Payoff</span>
-              <span className="font-bold text-sky-400">₹{Math.max(0, actualMonthlyRevenue - maintenanceWalletBalance).toLocaleString('en-IN')}</span>
+              <span className="text-amber-300 font-medium">Gap to 1-Time Cars24 Foreclosure</span>
+              <span className="font-bold text-amber-400">₹{foreclosureMetrics.remainingGap.toLocaleString('en-IN')}</span>
             </div>
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            Rule 3 Enforcement: Out of total monthly revenue, the first ₹5,000 automatically routes to the digital "Maintenance Wallet" balance before evaluating EMI payoff.
+            All revenue from fleet bookings redirects directly into the Cars24 Sinking Fund vault to accumulate towards 1-time full loan payoff. Operational expenses and maintenance are logged and managed separately.
           </p>
         </div>
 

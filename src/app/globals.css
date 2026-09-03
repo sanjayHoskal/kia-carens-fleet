@@ -37,14 +37,14 @@ html.dark .glass-card-emerald {
 }
 
 /* =========================================================
-   LIGHT MODE HIGH-CONTRAST PREMIUM DESIGN SYSTEM
+   LIGHT MODE BASE STYLES
    ========================================================= */
 html.light body {
   background-color: #f8fafc !important;
   color: #0f172a !important;
 }
 
-/* 1. Cards */
+/* Cards in light mode */
 html.light .glass-card {
   background: #ffffff !important;
   backdrop-filter: none !important;
@@ -69,67 +69,145 @@ html.light .glass-card-emerald {
   box-shadow: 0 4px 20px -2px rgba(16, 185, 129, 0.08) !important;
 }
 
-/* 2. Sub-panels and inner containers */
-html.light [class*="bg-slate-900"],
-html.light [class*="bg-slate-950"]:not(.fixed),
-html.light [class*="bg-slate-800"]:not(button):not(a):not(span) {
-  background-color: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
+/* =========================================================
+   UNIVERSAL WHITE/LIGHT TEXT FOR ALL DARK & COLORED BUTTONS
+   (Applies to BOTH Light & Dark mode for maximum readability)
+   ========================================================= */
+button[class*="bg-slate-"],
+button[class*="bg-slate-"] *,
+a[class*="bg-slate-"],
+a[class*="bg-slate-"] *,
+label[class*="bg-slate-"],
+label[class*="bg-slate-"] *,
+button[class*="bg-amber-"],
+button[class*="bg-amber-"] *,
+label[class*="bg-amber-"],
+label[class*="bg-amber-"] *,
+a[class*="bg-amber-"],
+a[class*="bg-amber-"] *,
+button[class*="bg-sky-"],
+button[class*="bg-sky-"] *,
+a[class*="bg-sky-"],
+a[class*="bg-sky-"] *,
+label[class*="bg-sky-"],
+label[class*="bg-sky-"] *,
+button[class*="bg-emerald-"],
+button[class*="bg-emerald-"] *,
+a[class*="bg-emerald-"],
+a[class*="bg-emerald-"] *,
+button[class*="bg-purple-"],
+button[class*="bg-purple-"] *,
+a[class*="bg-purple-"],
+a[class*="bg-purple-"] *,
+button[class*="bg-rose-"],
+button[class*="bg-rose-"] *,
+a[class*="bg-rose-"],
+a[class*="bg-rose-"] *,
+button[class*="bg-indigo-"],
+button[class*="bg-indigo-"] *,
+a[class*="bg-indigo-"],
+a[class*="bg-indigo-"] * {
+  color: #ffffff !important;
 }
 
-/* 3. High-Contrast Typography */
-html.light .text-white {
+/* Guarantee white text on all action buttons and button spans */
+button span,
+a[class*="rounded"] span,
+label[class*="rounded"] span {
+  color: inherit;
+}
+
+/* =========================================================
+   WHITE / LIGHT TEXT FOR ALL DARK BACKGROUND LISTS & ROWS
+   ========================================================= */
+/* Ensure dark background list items retain bright, highly legible text */
+[class*="bg-slate-900"] h1,
+[class*="bg-slate-900"] h2,
+[class*="bg-slate-900"] h3,
+[class*="bg-slate-900"] h4,
+[class*="bg-slate-950"] h1,
+[class*="bg-slate-950"] h2,
+[class*="bg-slate-950"] h3,
+[class*="bg-slate-800"] h1,
+[class*="bg-slate-800"] h2,
+[class*="bg-slate-800"] h3,
+[class*="bg-slate-900"] .text-white,
+[class*="bg-slate-950"] .text-white,
+[class*="bg-slate-800"] .text-white,
+[class*="bg-slate-900"] .text-slate-100,
+[class*="bg-slate-950"] .text-slate-100,
+[class*="bg-slate-800"] .text-slate-100 {
+  color: #ffffff !important;
+}
+
+[class*="bg-slate-900"] p,
+[class*="bg-slate-950"] p,
+[class*="bg-slate-800"] p,
+[class*="bg-slate-900"] .text-slate-200,
+[class*="bg-slate-950"] .text-slate-200,
+[class*="bg-slate-800"] .text-slate-200,
+[class*="bg-slate-900"] .text-slate-300,
+[class*="bg-slate-950"] .text-slate-300,
+[class*="bg-slate-800"] .text-slate-300 {
+  color: #f1f5f9 !important;
+}
+
+[class*="bg-slate-900"] .text-slate-400,
+[class*="bg-slate-950"] .text-slate-400,
+[class*="bg-slate-800"] .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+/* =========================================================
+   LIGHT MODE CONTRAST FOR PLAIN WHITE / CARD SURFACES
+   ========================================================= */
+/* Only text directly on white cards turns dark */
+html.light .glass-card:not([class*="bg-slate-"]) > h1,
+html.light .glass-card:not([class*="bg-slate-"]) > h2,
+html.light .glass-card:not([class*="bg-slate-"]) > h3,
+html.light .glass-card:not([class*="bg-slate-"]) > div > h1,
+html.light .glass-card:not([class*="bg-slate-"]) > div > h2,
+html.light .glass-card:not([class*="bg-slate-"]) > div > h3,
+html.light .glass-card:not([class*="bg-slate-"]) > div > div > h1,
+html.light .glass-card:not([class*="bg-slate-"]) > div > div > h2,
+html.light .glass-card:not([class*="bg-slate-"]) > div > div > h3 {
   color: #0f172a !important;
 }
 
-html.light .text-slate-100 {
-  color: #0f172a !important;
+html.light h1:not([class*="bg-slate-"] *):not(button *):not(a *),
+html.light h2:not([class*="bg-slate-"] *):not(button *):not(a *),
+html.light h3:not([class*="bg-slate-"] *):not(button *):not(a *) {
+  color: #0f172a;
 }
 
-html.light .text-slate-200 {
-  color: #1e293b !important;
-}
-
-html.light .text-slate-300 {
-  color: #334155 !important;
-}
-
-html.light .text-slate-400 {
-  color: #475569 !important;
-}
-
-html.light .text-slate-500 {
-  color: #64748b !important;
-}
-
-/* 4. Vivid High-Contrast Metric & Accent Colors */
+/* Vivid Metric & Accent Colors */
 html.light [class*="text-amber-200"],
 html.light [class*="text-amber-300"],
-html.light [class*="text-amber-400"] {
-  color: #b45309 !important; /* Deep rich amber */
+html.light [class*="text-amber-400"]:not([class*="bg-slate-"] *):not(button *):not(a *) {
+  color: #b45309 !important;
 }
 
 html.light [class*="text-emerald-300"],
-html.light [class*="text-emerald-400"] {
-  color: #047857 !important; /* Deep rich emerald */
+html.light [class*="text-emerald-400"]:not([class*="bg-slate-"] *):not(button *):not(a *) {
+  color: #047857 !important;
 }
 
 html.light [class*="text-sky-300"],
-html.light [class*="text-sky-400"] {
-  color: #0284c7 !important; /* Deep ocean sky */
+html.light [class*="text-sky-400"]:not([class*="bg-slate-"] *):not(button *):not(a *) {
+  color: #0284c7 !important;
 }
 
 html.light [class*="text-rose-300"],
-html.light [class*="text-rose-400"] {
-  color: #dc2626 !important; /* Deep crimson */
+html.light [class*="text-rose-400"]:not([class*="bg-slate-"] *):not(button *):not(a *) {
+  color: #dc2626 !important;
 }
 
 html.light [class*="text-indigo-300"],
-html.light [class*="text-indigo-400"] {
+html.light [class*="text-indigo-400"]:not([class*="bg-slate-"] *):not(button *):not(a *) {
   color: #4338ca !important;
 }
 
-/* 5. Clean Pill Badges */
+/* Clean Pill Badges in light mode */
 html.light [class*="bg-sky-950"] {
   background-color: #e0f2fe !important;
   border-color: #bae6fd !important;
@@ -154,45 +232,27 @@ html.light [class*="bg-rose-950"] {
   color: #b91c1c !important;
 }
 
+html.light [class*="bg-purple-950"] {
+  background-color: #f3e8ff !important;
+  border-color: #e9d5ff !important;
+  color: #6b21a8 !important;
+}
+
 html.light [class*="bg-indigo-950"] {
   background-color: #e0e7ff !important;
   border-color: #c7d2fe !important;
   color: #4338ca !important;
 }
 
-/* 6. Primary Colored Buttons Retain Crisp White Text */
-html.light button[class*="bg-sky-600"],
-html.light a[class*="bg-sky-600"],
-html.light button[class*="bg-emerald-600"],
-html.light a[class*="bg-emerald-600"],
-html.light button[class*="bg-amber-600"],
-html.light label[class*="bg-amber-600"],
-html.light button[class*="bg-purple-600"],
-html.light button[class*="bg-rose-600"] {
-  color: #ffffff !important;
-}
-
-html.light button[class*="bg-sky-600"] *,
-html.light a[class*="bg-sky-600"] *,
-html.light button[class*="bg-emerald-600"] *,
-html.light a[class*="bg-emerald-600"] *,
-html.light button[class*="bg-amber-600"] *,
-html.light label[class*="bg-amber-600"] *,
-html.light button[class*="bg-purple-600"] *,
-html.light button[class*="bg-rose-600"] * {
-  color: #ffffff !important;
-}
-
-/* 7. Header & Navigation */
+/* Header & Navigation in light mode */
 html.light header {
   background-color: rgba(255, 255, 255, 0.95) !important;
   border-bottom: 1px solid #e2e8f0 !important;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
-html.light header span, 
-html.light header p, 
-html.light header button:not([class*="bg-sky-600"]):not([class*="bg-emerald-600"]):not([class*="bg-purple-600"]) {
+html.light header span:not([class*="bg-sky-950"]):not([class*="bg-purple-950"]):not([class*="bg-emerald-950"]):not(button *),
+html.light header p {
   color: #0f172a !important;
 }
 
@@ -202,14 +262,14 @@ html.light footer {
   color: #64748b !important;
 }
 
-/* 8. Neutral Border Colors */
+/* Neutral Border Colors in light mode */
 html.light [class*="border-slate-800"],
 html.light [class*="border-slate-900"],
 html.light [class*="border-slate-700"] {
-  border-color: #e2e8f0 !important;
+  border-color: #e2e8f0;
 }
 
-/* 9. Forms & Inputs */
+/* Forms & Inputs in light mode */
 html.light input, 
 html.light select, 
 html.light textarea {
@@ -224,7 +284,7 @@ html.light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-/* 10. Scrollbar styling */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -249,3 +309,4 @@ html.light ::-webkit-scrollbar-thumb {
 html.light ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+

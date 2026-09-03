@@ -253,31 +253,24 @@ export const store = {
     const bookings = this.getBookings().filter(b => b.status !== 'Cancelled');
     const expenses = this.getExpenses();
 
+    // All revenue from fleet bookings redirects directly into the Cars24 Foreclosure Sinking Fund
     const totalGrossRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Calculate elapsed months for cumulative fixed cost allocation
-    const loanStartMonth = loan.startDate ? loan.startDate.substring(0, 7) : '2026-08';
-    const currentMonth = getCurrentMonthString();
-    const elapsedMonths = Math.max(1, getMonthsDifference(loanStartMonth, currentMonth));
-
-    const emiAllocation = loan.monthlyEmi * elapsedMonths;
-    const maintenanceAllocation = loan.monthlyMaintenanceTarget * elapsedMonths;
-
-    const netSurplus = Math.max(0, totalGrossRevenue - (totalExpenses + emiAllocation + maintenanceAllocation));
-    const foreclosureReserve = netSurplus;
+    const foreclosureReserve = totalGrossRevenue;
     const remainingGap = Math.max(0, loan.currentPrincipal - foreclosureReserve);
-    const progressPercent = loan.currentPrincipal > 0 
-      ? Math.min(100, Math.round((foreclosureReserve / loan.currentPrincipal) * 100))
+    const rawPct = loan.currentPrincipal > 0 
+      ? (foreclosureReserve / loan.currentPrincipal) * 100
       : 100;
+    const progressPercent = rawPct > 0 && rawPct < 1 
+      ? Number(rawPct.toFixed(2)) 
+      : Math.min(100, Math.round(rawPct));
     const isForeclosureReady = loan.currentPrincipal > 0 && foreclosureReserve >= loan.currentPrincipal;
 
     return {
       loan,
       totalGrossRevenue,
       totalExpenses,
-      emiAllocation,
-      maintenanceAllocation,
       foreclosureReserve,
       remainingGap,
       progressPercent,

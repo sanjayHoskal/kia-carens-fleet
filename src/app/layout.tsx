@@ -6,7 +6,7 @@ import RealtimeProvider from '@/components/RealtimeProvider';
 
 export const metadata: Metadata = {
   title: 'Kia Carens Fleet & Partnership Ledger | KA09MK6792',
-  description: 'Partnership and loan amortization tracker, ₹5,000 retention maintenance fund, OCR expense ledger, and digital rental contract manager for Sanjay P and Sachin.',
+  description: 'Kia Carens fleet and loan amortization tracker, Cars24 foreclosure sinking fund, and OCR expense ledger.',
 };
 
 export default function RootLayout({

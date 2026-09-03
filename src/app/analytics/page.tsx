@@ -67,18 +67,14 @@ export default function AnalyticsPage() {
   const elapsedMonths = Math.max(1, (ey - sy) * 12 + (em - sm));
 
   const emiAllocation = loan.monthlyEmi * elapsedMonths;
-  const maintenanceAllocation = loan.monthlyMaintenanceTarget * elapsedMonths;
-
-  const totalOutflows = totalExpenses + emiAllocation + maintenanceAllocation;
+  const totalOutflows = totalExpenses + emiAllocation;
   const netPnL = totalRevenue - totalOutflows;
 
-  // Cars24 Foreclosure Sinking Fund Metrics
+  // Cars24 Foreclosure Sinking Fund Metrics (All fleet booking revenue redirected to sinking fund)
   const foreclosureMetrics = store.getForeclosureMetrics();
-  const foreclosureReserve = Math.max(0, netPnL);
-  const remainingForeclosureGap = Math.max(0, loan.currentPrincipal - foreclosureReserve);
-  const foreclosurePercent = loan.currentPrincipal > 0 
-    ? Math.min(100, Math.round((foreclosureReserve / loan.currentPrincipal) * 100)) 
-    : 100;
+  const foreclosureReserve = foreclosureMetrics.foreclosureReserve;
+  const remainingForeclosureGap = foreclosureMetrics.remainingGap;
+  const foreclosurePercent = foreclosureMetrics.progressPercent;
 
   // Export P&L Report as CSV
   const exportCSV = () => {
@@ -94,8 +90,7 @@ export default function AnalyticsPage() {
       [''],
       ['EXPENSES & FIXED ALLOCATIONS', 'AMOUNT (INR)'],
       ['Monthly EMI Payoff', emiAllocation],
-      ['Maintenance Retention Wallet', maintenanceAllocation],
-      ['Fuel & Operational Expenses', totalExpenses],
+      ['Operational & Maintenance Expenses', totalExpenses],
       ['TOTAL OUTFLOWS', totalOutflows],
       [''],
       ['NET PROFIT / SURPLUS', netPnL],
@@ -138,10 +133,9 @@ export default function AnalyticsPage() {
     doc.text('2. Expenses & Fixed Obligations', 20, 82);
     doc.setFontSize(10);
     doc.text(`Vehicle Loan EMI (84 M): INR ${emiAllocation.toLocaleString('en-IN')}`, 25, 90);
-    doc.text(`Maintenance Retention Fund: INR ${maintenanceAllocation.toLocaleString('en-IN')}`, 25, 96);
-    doc.text(`Fuel & Maintenance Bills: INR ${totalExpenses.toLocaleString('en-IN')}`, 25, 102);
+    doc.text(`Operational & Maintenance Bills: INR ${totalExpenses.toLocaleString('en-IN')}`, 25, 96);
     doc.setFontSize(11);
-    doc.text(`Total Outflows: INR ${totalOutflows.toLocaleString('en-IN')}`, 25, 110);
+    doc.text(`Total Outflows: INR ${totalOutflows.toLocaleString('en-IN')}`, 25, 106);
 
     doc.line(20, 118, 190, 118);
     doc.setFontSize(14);
@@ -219,7 +213,7 @@ export default function AnalyticsPage() {
           <div className="text-2xl font-bold text-rose-400">
             ₹{totalOutflows.toLocaleString('en-IN')}
           </div>
-          <p className="text-xs text-slate-400 mt-1">EMI (₹{loan.monthlyEmi.toLocaleString('en-IN')}×{elapsedMonths}mo) + Retention (₹5k×{elapsedMonths}mo) + Ops</p>
+          <p className="text-xs text-slate-400 mt-1">EMI (₹{loan.monthlyEmi.toLocaleString('en-IN')}×{elapsedMonths}mo) + Logged Expenses (₹{totalExpenses.toLocaleString('en-IN')})</p>
         </div>
 
         {/* Cars24 Foreclosure Sinking Fund */}
