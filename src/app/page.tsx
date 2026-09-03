@@ -95,22 +95,37 @@ export default function Dashboard() {
   // Foreclosure Metrics
   const foreclosureMetrics = store.getForeclosureMetrics();
 
-  // Compute monthly metrics
-  const currentMonthBookings = bookings.filter((b) => b.status !== 'Cancelled');
+  // Helper: current month string (YYYY-MM)
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  // Filter bookings & expenses to CURRENT CALENDAR MONTH only for monthly P&L
+  const currentMonthBookings = bookings.filter((b) => {
+    if (b.status === 'Cancelled') return false;
+    const bookingMonth = b.createdAt ? b.createdAt.substring(0, 7) : '';
+    return bookingMonth === currentMonthStr;
+  });
   const actualMonthlyRevenue = currentMonthBookings.reduce((sum, b) => sum + b.totalAmount, 0);
   const displayRevenue = actualMonthlyRevenue;
+
+  const currentMonthExpenses = expenses.filter((e) => {
+    const expMonth = e.createdAt ? e.createdAt.substring(0, 7) : '';
+    return expMonth === currentMonthStr;
+  });
+  const monthlyExpenses = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   
-  const monthlyExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  
-  // Rule: Target = ₹21,000 EMI + ₹5,000 Maintenance Retention + Logged Operational Expenses
+  // Rule: Target = ₹21,000 EMI + ₹5,000 Maintenance Retention + Current Month's Operational Expenses
   const emiAmount = loan.monthlyEmi;
   const maintenanceTarget = loan.monthlyMaintenanceTarget;
   const totalFixedTarget = emiAmount + maintenanceTarget; // ₹26,000
   const totalOutflows = monthlyExpenses + totalFixedTarget;
 
-  // Deficit calculation incorporating operational spendings
+  // Deficit calculation — current month only
   const deficit = Math.max(0, totalOutflows - displayRevenue);
   const partnerSplit = Math.ceil(deficit / 2);
+
+  // All-time totals (for display reference, not used in monthly P&L)
+  const allTimeExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Amortization metrics
   const clearedPrincipal = loan.initialPrincipal - loan.currentPrincipal;
@@ -288,7 +303,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80">
-            <span className="text-xs text-slate-400">{expenses.length} Bills Logged</span>
+            <span className="text-xs text-slate-400">{currentMonthExpenses.length} Bills This Month</span>
             <Link href="/expenses" className="text-[11px] text-sky-400 hover:underline font-semibold">View All</Link>
           </div>
         </div>
@@ -467,7 +482,7 @@ export default function Dashboard() {
               50:50 Out-of-Pocket Split Calculator
             </h2>
             <p className="text-xs text-slate-400">
-              Evaluates monthly revenue against logged spendings (₹{monthlyExpenses.toLocaleString('en-IN')}) + ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance target (Total Outflows: ₹{totalOutflows.toLocaleString('en-IN')}).
+              Current month: revenue vs. this month's spendings (₹{monthlyExpenses.toLocaleString('en-IN')}) + ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance (Total: ₹{totalOutflows.toLocaleString('en-IN')}).
             </p>
           </div>
         </div>
@@ -482,12 +497,12 @@ export default function Dashboard() {
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1 font-semibold">Logged Operational Spendings</span>
+            <span className="text-xs text-slate-400 block mb-1 font-semibold">This Month's Operational Spendings</span>
             <span className="text-xl font-bold text-rose-400 font-mono">
               ₹{monthlyExpenses.toLocaleString('en-IN')}
             </span>
             <span className="text-[10px] text-slate-400 block mt-0.5">
-              ({expenses.length} bills logged)
+              ({currentMonthExpenses.length} bills this month)
             </span>
           </div>
 

@@ -57,8 +57,17 @@ export default function AnalyticsPage() {
 
   const totalRevenue = zoomcarRevenue + dealerRevenue + privateRevenue;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const emiAllocation = loan.monthlyEmi;
-  const maintenanceAllocation = loan.monthlyMaintenanceTarget;
+
+  // Calculate elapsed months since loan start for cumulative fixed cost allocation
+  const loanStartMonth = loan.startDate ? loan.startDate.substring(0, 7) : '2026-08';
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [sy, sm] = loanStartMonth.split('-').map(Number);
+  const [ey, em] = currentMonth.split('-').map(Number);
+  const elapsedMonths = Math.max(1, (ey - sy) * 12 + (em - sm));
+
+  const emiAllocation = loan.monthlyEmi * elapsedMonths;
+  const maintenanceAllocation = loan.monthlyMaintenanceTarget * elapsedMonths;
 
   const totalOutflows = totalExpenses + emiAllocation + maintenanceAllocation;
   const netPnL = totalRevenue - totalOutflows;
@@ -210,7 +219,7 @@ export default function AnalyticsPage() {
           <div className="text-2xl font-bold text-rose-400">
             ₹{totalOutflows.toLocaleString('en-IN')}
           </div>
-          <p className="text-xs text-slate-400 mt-1">EMI (₹21k) + Retention (₹5k) + Ops</p>
+          <p className="text-xs text-slate-400 mt-1">EMI (₹{loan.monthlyEmi.toLocaleString('en-IN')}×{elapsedMonths}mo) + Retention (₹5k×{elapsedMonths}mo) + Ops</p>
         </div>
 
         {/* Cars24 Foreclosure Sinking Fund */}

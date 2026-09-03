@@ -1,5 +1,8 @@
 import { Booking, Expense, AuditLog, LoanState, PartnerUser } from './types';
 import { supabase } from './supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
+
+let realtimeChannel: RealtimeChannel | null = null;
 
 const INITIAL_LOAN_STATE: LoanState = {
   vehicleNumber: 'KA09MK6792',
@@ -252,8 +255,14 @@ export const store = {
 
     const totalGrossRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const emiAllocation = loan.monthlyEmi;
-    const maintenanceAllocation = loan.monthlyMaintenanceTarget;
+
+    // Calculate elapsed months for cumulative fixed cost allocation
+    const loanStartMonth = loan.startDate ? loan.startDate.substring(0, 7) : '2026-08';
+    const currentMonth = getCurrentMonthString();
+    const elapsedMonths = Math.max(1, getMonthsDifference(loanStartMonth, currentMonth));
+
+    const emiAllocation = loan.monthlyEmi * elapsedMonths;
+    const maintenanceAllocation = loan.monthlyMaintenanceTarget * elapsedMonths;
 
     const netSurplus = Math.max(0, totalGrossRevenue - (totalExpenses + emiAllocation + maintenanceAllocation));
     const foreclosureReserve = netSurplus;
@@ -760,5 +769,76 @@ export const store = {
     }
 
     return { loan, bookings, expenses, auditLogs };
-  }
+  },
+
+  // --- SUPABASE REALTIME SUBSCRIPTIONS ---
+  subscribeToRealtimeChanges() {
+    if (typeof window === 'undefined') return;
+    if (realtimeChannel) return; // Already subscribed
+
+    realtimeChannel = supabase
+      .channel('fleet-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        async () => {
+          console.log('[Realtime] bookings table changed');
+          try {
+            await this.fetchBookingsAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime bookings sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses' },
+        async () => {
+          console.log('[Realtime] expenses table changed');
+          try {
+            await this.fetchExpensesAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime expenses sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'loan_settings' },
+        async () => {
+          console.log('[Realtime] loan_settings table changed');
+          try {
+            await this.fetchLoanStateAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime loan sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'audit_logs' },
+        async () => {
+          console.log('[Realtime] audit_logs table changed');
+          try {
+            await this.fetchAuditLogsAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime audit sync error:', e);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Subscription status:', status);
+      });
+  },
+
+  unsubscribeFromRealtimeChanges() {
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+  },
 };
