@@ -770,53 +770,105 @@ export const store = {
       .channel('fleet-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings' },
+        { event: 'INSERT', schema: 'public', table: 'bookings' },
         async () => {
-          console.log('[Realtime] bookings table changed');
+          console.log('[Realtime] bookings INSERT');
           try {
             await this.fetchBookingsAsync();
             window.dispatchEvent(new Event('kc_data_sync'));
           } catch (e) {
-            console.error('Realtime bookings sync error:', e);
+            console.error('Realtime bookings insert sync error:', e);
           }
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'expenses' },
+        { event: 'UPDATE', schema: 'public', table: 'bookings' },
         async () => {
-          console.log('[Realtime] expenses table changed');
+          console.log('[Realtime] bookings UPDATE');
+          try {
+            await this.fetchBookingsAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime bookings update sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'expenses' },
+        async () => {
+          console.log('[Realtime] expenses INSERT');
           try {
             await this.fetchExpensesAsync();
             window.dispatchEvent(new Event('kc_data_sync'));
           } catch (e) {
-            console.error('Realtime expenses sync error:', e);
+            console.error('Realtime expenses insert sync error:', e);
           }
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'loan_settings' },
+        { event: 'UPDATE', schema: 'public', table: 'expenses' },
         async () => {
-          console.log('[Realtime] loan_settings table changed');
+          console.log('[Realtime] expenses UPDATE');
+          try {
+            await this.fetchExpensesAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime expenses update sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'loan_settings' },
+        async () => {
+          console.log('[Realtime] loan_settings INSERT');
           try {
             await this.fetchLoanStateAsync();
             window.dispatchEvent(new Event('kc_data_sync'));
           } catch (e) {
-            console.error('Realtime loan sync error:', e);
+            console.error('Realtime loan insert sync error:', e);
           }
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'audit_logs' },
+        { event: 'UPDATE', schema: 'public', table: 'loan_settings' },
         async () => {
-          console.log('[Realtime] audit_logs table changed');
+          console.log('[Realtime] loan_settings UPDATE');
+          try {
+            await this.fetchLoanStateAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime loan update sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+        async () => {
+          console.log('[Realtime] audit_logs INSERT');
           try {
             await this.fetchAuditLogsAsync();
             window.dispatchEvent(new Event('kc_data_sync'));
           } catch (e) {
-            console.error('Realtime audit sync error:', e);
+            console.error('Realtime audit insert sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'audit_logs' },
+        async () => {
+          console.log('[Realtime] audit_logs UPDATE');
+          try {
+            await this.fetchAuditLogsAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime audit update sync error:', e);
           }
         }
       )

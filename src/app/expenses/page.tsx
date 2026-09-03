@@ -195,9 +195,11 @@ export default function ExpensesPage() {
 
   const handleDeleteExpense = async (id: string, description: string) => {
     if (confirm(`Are you sure you want to delete expense "${description}"?`)) {
+      // Optimistically remove from UI
       setIsRefreshing(true);
       await store.deleteExpense(id);
-      await refreshExpenses();
+      // Update local state from storage (source of truth) without refetching from server immediately
+      setExpenses(store.getExpenses());
       setIsRefreshing(false);
     }
   };
