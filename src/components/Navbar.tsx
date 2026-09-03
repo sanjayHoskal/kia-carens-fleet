@@ -95,7 +95,6 @@ export default function Navbar() {
     { href: '/bookings', label: 'Bookings', icon: CalendarCheck2 },
     { href: '/expenses', label: 'Expenses & OCR', icon: Receipt },
     { href: '/analytics', label: 'P&L Reports', icon: TrendingUp },
-    { href: '/audit', label: 'Audit Log', icon: ShieldCheck },
   ];
 
   return (
@@ -117,7 +116,7 @@ export default function Navbar() {
                   KA09MK6792
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Sanjay & Sachin Fleet Ledger</p>
+              <p className="text-[11px] text-slate-400">Fleet & Partnership Ledger</p>
             </div>
           </Link>
 
@@ -178,41 +177,10 @@ export default function Navbar() {
                   <span>Hosting: ₹0</span>
                 </div>
 
-                {/* User Toggle */}
-                <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
-                  <button
-                    onClick={() => handleSwitchUser('Sanjay P')}
-                    className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      currentUser === 'Sanjay P'
-                        ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    <span>Sanjay P</span>
-                  </button>
-                  <button
-                    onClick={() => handleSwitchUser('Sachin')}
-                    className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      currentUser === 'Sachin'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    <span>Sachin</span>
-                  </button>
-                  <button
-                    onClick={() => handleSwitchUser('Admin')}
-                    className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      currentUser === 'Admin'
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Lock className="h-3.5 w-3.5" />
-                    <span>Admin</span>
-                  </button>
+                {/* Admin Role Badge */}
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-950/80 border border-purple-800 text-purple-300 text-xs font-semibold shadow-sm">
+                  <Lock className="h-3.5 w-3.5 text-purple-400" />
+                  <span>Admin</span>
                 </div>
 
                 {/* Logout Button */}
@@ -277,38 +245,12 @@ export default function Navbar() {
           })}
 
           <div className="pt-3 border-t border-slate-800 space-y-3">
-            <p className="text-xs text-slate-400">Switch Active Account:</p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => handleSwitchUser('Sanjay P')}
-                className={`py-2 rounded-lg text-xs font-semibold text-center border ${
-                  currentUser === 'Sanjay P'
-                    ? 'bg-sky-600 border-sky-500 text-white'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
-              >
-                Sanjay P
-              </button>
-              <button
-                onClick={() => handleSwitchUser('Sachin')}
-                className={`py-2 rounded-lg text-xs font-semibold text-center border ${
-                  currentUser === 'Sachin'
-                    ? 'bg-emerald-600 border-emerald-500 text-white'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
-              >
-                Sachin
-              </button>
-              <button
-                onClick={() => handleSwitchUser('Admin')}
-                className={`py-2 rounded-lg text-xs font-semibold text-center border ${
-                  currentUser === 'Admin'
-                    ? 'bg-purple-600 border-purple-500 text-white'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
-              >
-                Admin
-              </button>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-purple-950/60 border border-purple-800 text-purple-300 text-xs font-semibold">
+              <div className="flex items-center space-x-2">
+                <Lock className="h-4 w-4 text-purple-400" />
+                <span>Admin Session Active</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900 text-purple-200 border border-purple-700">Master</span>
             </div>
             
             <button

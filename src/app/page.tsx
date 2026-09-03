@@ -161,8 +161,8 @@ export default function Dashboard() {
             <span className="text-xs px-2.5 py-1 rounded-md bg-sky-950 text-sky-400 border border-sky-800 font-semibold">
               Vehicle: Kia Carens (KA09MK6792)
             </span>
-            <span className="text-xs px-2.5 py-1 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Partner Account: {currentUser}
+            <span className="text-xs px-2.5 py-1 rounded-md bg-purple-950 text-purple-300 border border-purple-800 font-semibold flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Account: Admin
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
