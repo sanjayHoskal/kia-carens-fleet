@@ -50,6 +50,7 @@ export default function ExpensesPage() {
     ocrDate: '',
     isSplit: true,
     paidBy: 'Sanjay P' as PartnerUser,
+    paymentSource: 'partner' as 'partner' | 'booking_revenue',
   });
 
   // Settle Expense Modal State
@@ -153,7 +154,8 @@ export default function ExpensesPage() {
       return;
     }
 
-    const splitAmount = formData.isSplit ? Math.ceil(numericAmount / 2) : 0;
+    const isDeductFromRevenue = formData.paymentSource === 'booking_revenue';
+    const splitAmount = (!isDeductFromRevenue && formData.isSplit) ? Math.ceil(numericAmount / 2) : 0;
 
     store.addExpense({
       category: formData.category,
@@ -165,9 +167,11 @@ export default function ExpensesPage() {
         amount: numericAmount,
       } : undefined,
       loggedBy: formData.paidBy,
-      isSplit: formData.isSplit,
+      paidFromBookingRevenue: isDeductFromRevenue,
+      isSplit: !isDeductFromRevenue && formData.isSplit,
       splitAmount: splitAmount,
-      settledStatus: formData.isSplit ? 'Pending' : 'Settled',
+      settledStatus: isDeductFromRevenue ? 'Settled' : (formData.isSplit ? 'Pending' : 'Settled'),
+      settlementMode: isDeductFromRevenue ? 'Deducted from Booking Revenue' : '',
     });
 
     refreshExpenses();
@@ -181,6 +185,7 @@ export default function ExpensesPage() {
       ocrDate: '',
       isSplit: true,
       paidBy: currentUser,
+      paymentSource: 'partner',
     });
   };
 
@@ -345,7 +350,7 @@ export default function ExpensesPage() {
           </div>
 
           <form onSubmit={handleSaveExpense} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-slate-400 mb-1 font-semibold">Expense Category</label>
                 <select
@@ -374,31 +379,61 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-semibold">Paid By</label>
+                <label className="block text-slate-400 mb-1 font-semibold">Payment Source / Funding</label>
                 <select
-                  value={formData.paidBy}
-                  onChange={(e) => setFormData({ ...formData, paidBy: e.target.value as PartnerUser })}
+                  value={formData.paymentSource}
+                  onChange={(e) => {
+                    const src = e.target.value as 'partner' | 'booking_revenue';
+                    setFormData({
+                      ...formData,
+                      paymentSource: src,
+                      isSplit: src === 'booking_revenue' ? false : formData.isSplit,
+                    });
+                  }}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-semibold"
                 >
-                  <option value="Sanjay P">Sanjay P</option>
-                  <option value="Sachin">Sachin</option>
+                  <option value="partner">Paid by Partner (Out-of-Pocket)</option>
+                  <option value="booking_revenue">⚡ Deduct from Booking Revenue (Sinking Fund)</option>
                 </select>
-              </div>
-
-              <div className="flex flex-col justify-end">
-                <label className="flex items-center space-x-2 p-2 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isSplit}
-                    onChange={(e) => setFormData({ ...formData, isSplit: e.target.checked })}
-                    className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500"
-                  />
-                  <span className="font-semibold text-white">Split 50:50 with partner</span>
-                </label>
               </div>
             </div>
 
-            {formData.isSplit && formData.amount && Number(formData.amount) > 0 && (
+            {formData.paymentSource === 'booking_revenue' ? (
+              <div className="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-emerald-200 font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  <strong>⚡ Deducted from Booking Revenue:</strong> ₹{Number(formData.amount || 0).toLocaleString('en-IN')} will be deducted directly from the Cars24 Sinking Fund balance. No 50:50 split needed (neither partner owes money).
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Paid By</label>
+                  <select
+                    value={formData.paidBy}
+                    onChange={(e) => setFormData({ ...formData, paidBy: e.target.value as PartnerUser })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-semibold"
+                  >
+                    <option value="Sanjay P">Sanjay P</option>
+                    <option value="Sachin">Sachin</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col justify-end pt-5">
+                  <label className="flex items-center space-x-2 p-2 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isSplit}
+                      onChange={(e) => setFormData({ ...formData, isSplit: e.target.checked })}
+                      className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500"
+                    />
+                    <span className="font-semibold text-white">Split 50:50 with partner</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {formData.paymentSource === 'partner' && formData.isSplit && formData.amount && Number(formData.amount) > 0 && (
               <div className="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-sky-200 font-semibold flex items-center justify-between">
                 <span>50:50 Calculation:</span>
                 <span>
@@ -505,9 +540,15 @@ export default function ExpensesPage() {
                       <div>
                         <div className="flex items-center space-x-2">
                           <span className="font-bold text-white text-sm">{exp.category}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
-                            Paid by {exp.loggedBy}
-                          </span>
+                          {(exp.paidFromBookingRevenue || exp.settlementMode === 'Deducted from Booking Revenue') ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono font-semibold flex items-center gap-1">
+                              ⚡ Deducted from Booking Revenue
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                              Paid by {exp.loggedBy}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-300 mt-0.5">{exp.description}</p>
                         <p className="text-[11px] text-slate-400 mt-1">{new Date(exp.createdAt).toLocaleString()}</p>
@@ -538,8 +579,18 @@ export default function ExpensesPage() {
                     </div>
                   </div>
 
+                  {/* Deduction from Booking Revenue Sinking Fund Notice */}
+                  {(exp.paidFromBookingRevenue || exp.settlementMode === 'Deducted from Booking Revenue') && (
+                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Deducted from Fleet Booking Revenue • Cars24 Sinking Fund adjusted: -₹{exp.amount.toLocaleString('en-IN')} • No partner debt
+                      </span>
+                    </div>
+                  )}
+
                   {/* 50:50 Split & Settlement Status Footer */}
-                  {exp.isSplit && (
+                  {exp.isSplit && !exp.paidFromBookingRevenue && exp.settlementMode !== 'Deducted from Booking Revenue' && (
                     <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
                       <div className="flex items-center space-x-2">
                         {exp.settledStatus === 'Settled' ? (

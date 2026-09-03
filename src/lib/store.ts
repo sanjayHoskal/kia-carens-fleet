@@ -257,7 +257,13 @@ export const store = {
     const totalGrossRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-    const foreclosureReserve = totalGrossRevenue;
+    // Sum of expenses paid/deducted directly from fleet booking revenue
+    const bookingDeductedExpenses = expenses
+      .filter(e => e.paidFromBookingRevenue || e.settlementMode === 'Deducted from Booking Revenue' || e.settlementMode === 'Offset against Booking Revenue')
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    // Sinking Fund = Gross booking revenue minus any expenses deducted from booking revenue
+    const foreclosureReserve = Math.max(0, totalGrossRevenue - bookingDeductedExpenses);
     const remainingGap = Math.max(0, loan.currentPrincipal - foreclosureReserve);
     const rawPct = loan.currentPrincipal > 0 
       ? (foreclosureReserve / loan.currentPrincipal) * 100
@@ -271,6 +277,7 @@ export const store = {
       loan,
       totalGrossRevenue,
       totalExpenses,
+      bookingDeductedExpenses,
       foreclosureReserve,
       remainingGap,
       progressPercent,
@@ -494,6 +501,12 @@ export const store = {
           settlementMode: e.settlement_mode,
           settledAt: e.settled_at,
           settledBy: e.settled_by,
+          paidFromBookingRevenue: !!(
+            e.paid_from_booking_revenue || 
+            e.settlement_mode === 'Deducted from Booking Revenue' || 
+            e.settlement_mode === 'Offset against Booking Revenue' || 
+            e.ocr_extracted_data?.paidFromBookingRevenue
+          ),
           createdAt: e.created_at,
         }));
 
@@ -545,9 +558,21 @@ export const store = {
 
   addExpense(expense: Omit<Expense, 'id' | 'createdAt'>): Expense {
     const current = this.getExpenses();
+    const isFromRevenue = !!(
+      expense.paidFromBookingRevenue || 
+      expense.settlementMode === 'Deducted from Booking Revenue'
+    );
+
     const newExpense: Expense = {
       ...expense,
       id: generateUUID(),
+      paidFromBookingRevenue: isFromRevenue,
+      isSplit: isFromRevenue ? false : expense.isSplit,
+      splitAmount: isFromRevenue ? 0 : expense.splitAmount,
+      settledStatus: isFromRevenue ? 'Settled' : (expense.settledStatus || 'Pending'),
+      settlementMode: isFromRevenue ? 'Deducted from Booking Revenue' : (expense.settlementMode || ''),
+      settledAt: isFromRevenue ? new Date().toISOString() : expense.settledAt,
+      settledBy: isFromRevenue ? (expense.loggedBy || 'Booking Revenue') : expense.settledBy,
       createdAt: new Date().toISOString(),
     };
     const updated = [newExpense, ...current];
@@ -561,19 +586,27 @@ export const store = {
       amount: expense.amount,
       description: expense.description,
       bill_photo_url: expense.billPhotoUrl,
-      ocr_extracted_data: expense.ocrExtractedData,
+      ocr_extracted_data: {
+        ...(expense.ocrExtractedData || {}),
+        paidFromBookingRevenue: isFromRevenue,
+      },
       logged_by: expense.loggedBy,
-      is_split: expense.isSplit,
-      split_amount: expense.splitAmount,
-      settled_status: expense.settledStatus || 'Pending',
+      is_split: newExpense.isSplit,
+      split_amount: newExpense.splitAmount,
+      settled_status: newExpense.settledStatus,
+      settlement_mode: newExpense.settlementMode,
+      settled_at: newExpense.settledAt,
+      settled_by: newExpense.settledBy,
       created_at: newExpense.createdAt,
     }]).then(({ error }) => {
       if (error) console.error('Supabase insert expense error:', error);
     });
 
-    const splitNote = expense.isSplit 
-      ? ` (50:50 Split: ₹${expense.splitAmount?.toLocaleString('en-IN')} pending from partner)`
-      : '';
+    const splitNote = isFromRevenue
+      ? ` (Deducted from Booking Revenue - Sinking Fund adjusted)`
+      : expense.isSplit 
+        ? ` (50:50 Split: ₹${expense.splitAmount?.toLocaleString('en-IN')} pending from partner)`
+        : '';
     this.addAuditLog('Logged Expense', `Logged ${expense.category} expense of ₹${expense.amount.toLocaleString('en-IN')} (${expense.description})${splitNote}`);
     return newExpense;
   },

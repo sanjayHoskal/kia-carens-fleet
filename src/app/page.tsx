@@ -516,8 +516,14 @@ export default function Dashboard() {
               <span className="text-slate-400">Total Fleet Bookings Revenue</span>
               <span className="font-bold text-emerald-400">₹{foreclosureMetrics.totalGrossRevenue.toLocaleString('en-IN')}</span>
             </div>
+            {foreclosureMetrics.bookingDeductedExpenses > 0 && (
+              <div className="flex justify-between items-center pb-2 border-b border-slate-800 text-rose-400">
+                <span>Deducted for Fleet Expenses</span>
+                <span className="font-bold">-₹{foreclosureMetrics.bookingDeductedExpenses.toLocaleString('en-IN')}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-              <span className="text-sky-300 font-medium">100% Directed to Sinking Fund</span>
+              <span className="text-sky-300 font-medium">Accumulated Sinking Fund</span>
               <span className="font-bold text-sky-400">₹{foreclosureMetrics.foreclosureReserve.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between items-center">
@@ -527,7 +533,7 @@ export default function Dashboard() {
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            All revenue from fleet bookings redirects directly into the Cars24 Sinking Fund vault to accumulate towards 1-time full loan payoff. Operational expenses and maintenance are logged and managed separately.
+            All fleet booking revenue accumulates in the Cars24 Sinking Fund vault. Any expenses marked &quot;Deduct from Booking Revenue&quot; automatically adjust this balance, while out-of-pocket partner expenses are settled independently.
           </p>
         </div>
 

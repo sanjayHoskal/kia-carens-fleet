@@ -82,6 +82,7 @@ export interface Expense {
   settlementMode?: string; // 'UPI', 'Cash', 'Bank Transfer', 'Offset against Booking Revenue'
   settledAt?: string;
   settledBy?: PartnerUser;
+  paidFromBookingRevenue?: boolean; // When true, deducted directly from fleet booking revenue/sinking fund
   createdAt: string;
 }
 
