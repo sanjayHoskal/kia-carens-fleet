@@ -169,7 +169,7 @@ export default function Dashboard() {
             Partnership & Loan Amortization Dashboard
           </h1>
           <p className="text-sm text-slate-400">
-            Real-time financial status, out-of-pocket split calculator, and No-Profit vault lock.
+            Real-time financial status, fleet bookings, operational expenses, and Cars24 foreclosure vault.
           </p>
         </div>
 
@@ -471,95 +471,6 @@ export default function Dashboard() {
             <span>Target: 1-Time Cars24 Lump-Sum Payoff</span>
           </div>
         </div>
-      </div>
-
-      {/* CORE FEATURE 2: 50:50 Out-of-Pocket Split Calculator & Alert */}
-      <div className="glass-card p-6 rounded-2xl border-slate-800 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-sky-400" />
-              50:50 Out-of-Pocket Split Calculator
-            </h2>
-            <p className="text-xs text-slate-400">
-              Current month: revenue vs. this month's spendings (₹{monthlyExpenses.toLocaleString('en-IN')}) + ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance (Total: ₹{totalOutflows.toLocaleString('en-IN')}).
-            </p>
-          </div>
-        </div>
-
-        {/* Calculation Breakdown Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1 font-semibold">Monthly Fleet Revenue</span>
-            <span className="text-xl font-bold text-emerald-400 font-mono">
-              ₹{displayRevenue.toLocaleString('en-IN')}
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1 font-semibold">This Month's Operational Spendings</span>
-            <span className="text-xl font-bold text-rose-400 font-mono">
-              ₹{monthlyExpenses.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">
-              ({currentMonthExpenses.length} bills this month)
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1 font-semibold">Fixed Targets (EMI + Retention)</span>
-            <span className="text-xl font-bold text-slate-200 font-mono">
-              ₹{totalFixedTarget.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">
-              (₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI + ₹5,000 Maintenance)
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-xs text-slate-400 block mb-1 font-semibold font-mono">Net Deficit / Out-of-Pocket</span>
-            <span className={`text-xl font-bold font-mono ${deficit > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              ₹{deficit.toLocaleString('en-IN')}
-            </span>
-          </div>
-        </div>
-
-        {/* Automatic Alert Result Box */}
-        {deficit > 0 ? (
-          <div className="glass-card-amber p-4 rounded-xl border border-rose-500/40 bg-rose-950/30 flex items-center space-x-4 animate-pulse">
-            <div className="p-3 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/50 shrink-0">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-rose-300 uppercase tracking-wider block">
-                Automatic Out-of-Pocket Alert
-              </span>
-              <h3 className="text-base sm:text-lg font-black text-rose-100 mt-0.5">
-                "Sanjay & Sachin need to deposit ₹{partnerSplit.toLocaleString('en-IN')} each this month."
-              </h3>
-              <p className="text-xs text-rose-300/80 mt-0.5">
-                Total monthly deficit is ₹{deficit.toLocaleString('en-IN')}. Under the 50:50 equal split rule, both partners deposit ₹{partnerSplit.toLocaleString('en-IN')} to cover EMI and maintenance.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/30 flex items-center space-x-4">
-            <div className="p-3 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider block">
-                Monthly Target Fulfilled
-              </span>
-              <h3 className="text-base font-bold text-emerald-100 mt-0.5">
-                No Out-of-Pocket Deposit Required
-              </h3>
-              <p className="text-xs text-emerald-300/80">
-                Monthly fleet revenue covers the ₹{loan.monthlyEmi.toLocaleString('en-IN')} EMI and ₹5,000 maintenance fund retention target cleanly!
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Bookings & Operational Highlights */}
