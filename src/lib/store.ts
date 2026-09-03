@@ -372,18 +372,13 @@ export const store = {
           }
         }
 
-        const mergedMap = new Map<string, Booking>();
-        [...cloudFormatted, ...local].forEach((item) => {
-          if (!mergedMap.has(item.id)) {
-            mergedMap.set(item.id, item);
-          }
-        });
-        const mergedList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // Cloud is the source of truth — cloudFormatted already includes successfully pushed local items
+        const finalList = cloudFormatted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(mergedList));
+          localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(finalList));
         }
-        return mergedList;
+        return finalList;
       }
     } catch (err) {
       console.error('Supabase fetch bookings error:', err);
@@ -541,18 +536,13 @@ export const store = {
           }
         }
 
-        const mergedMap = new Map<string, Expense>();
-        [...cloudFormatted, ...local].forEach((item) => {
-          if (!mergedMap.has(item.id)) {
-            mergedMap.set(item.id, item);
-          }
-        });
-        const mergedList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // Cloud is the source of truth — cloudFormatted already includes successfully pushed local items
+        const finalList = cloudFormatted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(mergedList));
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(finalList));
         }
-        return mergedList;
+        return finalList;
       }
     } catch (err) {
       console.error('Supabase fetch expenses error:', err);
