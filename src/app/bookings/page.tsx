@@ -102,8 +102,13 @@ export default function BookingsPage() {
 
   const handleDeleteBooking = async (id: string, guestName: string) => {
     if (confirm(`Are you sure you want to delete booking "${id}" for guest ${guestName}?`)) {
-      await store.deleteBooking(id);
-      await refreshBookingsAsync();
+      const success = await store.deleteBooking(id);
+      if (success) {
+        await refreshBookingsAsync();
+      } else {
+        alert('Could not delete booking from cloud database. Please check your network connection.');
+        setBookings(store.getBookings());
+      }
     }
   };
 

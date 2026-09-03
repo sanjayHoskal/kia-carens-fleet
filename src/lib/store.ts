@@ -55,12 +55,30 @@ const INITIAL_AUDIT_LOGS: AuditLog[] = [
 ];
 
 const STORAGE_KEYS = {
-  CURRENT_USER: 'kc_current_user_v6',
-  LOAN: 'kc_loan_state_v6',
-  BOOKINGS: 'kc_bookings_v6',
-  EXPENSES: 'kc_expenses_v6',
-  AUDIT: 'kc_audit_logs_v6',
+  CURRENT_USER: 'kc_current_user_v7',
+  LOAN: 'kc_loan_state_v7',
+  BOOKINGS: 'kc_bookings_v7',
+  EXPENSES: 'kc_expenses_v7',
+  AUDIT: 'kc_audit_logs_v7',
 };
+
+// Self-healing migration: wipe legacy localStorage keys (v1-v6) across all devices on load
+// This prevents older cached browser sessions (e.g. Sachin's browser) from resurrecting deleted records
+if (typeof window !== 'undefined') {
+  try {
+    const LEGACY_KEYS = [
+      'kc_loan_state', 'kc_bookings', 'kc_expenses', 'kc_audit_logs', 'kc_current_user',
+      'kc_loan_state_v2', 'kc_bookings_v2', 'kc_expenses_v2', 'kc_audit_logs_v2', 'kc_current_user_v2',
+      'kc_loan_state_v3', 'kc_bookings_v3', 'kc_expenses_v3', 'kc_audit_logs_v3', 'kc_current_user_v3',
+      'kc_loan_state_v4', 'kc_bookings_v4', 'kc_expenses_v4', 'kc_audit_logs_v4', 'kc_current_user_v4',
+      'kc_loan_state_v5', 'kc_bookings_v5', 'kc_expenses_v5', 'kc_audit_logs_v5', 'kc_current_user_v5',
+      'kc_loan_state_v6', 'kc_bookings_v6', 'kc_expenses_v6', 'kc_audit_logs_v6', 'kc_current_user_v6',
+    ];
+    LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
+}
 
 export const store = {
   getCurrentUser(): PartnerUser | null {
@@ -414,9 +432,19 @@ export const store = {
 
     try {
       const { error } = await supabase.from('bookings').delete().eq('id', id);
-      if (error) console.error('Supabase delete booking error:', error);
+      if (error) {
+        console.error('Supabase delete booking error:', error);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(current));
+        }
+        return false;
+      }
     } catch (e) {
       console.error('Supabase delete booking exception:', e);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(current));
+      }
+      return false;
     }
 
     if (target) {
@@ -581,9 +609,19 @@ export const store = {
 
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', id);
-      if (error) console.error('Supabase delete expense error:', error);
+      if (error) {
+        console.error('Supabase delete expense error:', error);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(current));
+        }
+        return false;
+      }
     } catch (e) {
       console.error('Supabase delete expense exception:', e);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(current));
+      }
+      return false;
     }
 
     if (target) {
