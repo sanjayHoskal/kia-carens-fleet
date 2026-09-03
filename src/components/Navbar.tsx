@@ -14,8 +14,6 @@ import {
   CheckCircle2, 
   Menu, 
   X,
-  Sun,
-  Moon,
   LogOut,
   Lock,
   RefreshCw,
@@ -30,7 +28,6 @@ export default function Navbar() {
   const [currentUser, setCurrentUser] = useState<PartnerUser | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
 
@@ -54,10 +51,9 @@ export default function Navbar() {
 
     syncAuth();
 
-    const savedTheme = store.getTheme();
-    setTheme(savedTheme);
-    document.documentElement.classList.remove('dark', 'light');
-    document.documentElement.classList.add(savedTheme);
+    // Ensure dark class is always set
+    document.documentElement.classList.remove('light');
+    document.documentElement.classList.add('dark');
 
     window.addEventListener('kc_auth_change', syncAuth);
     return () => window.removeEventListener('kc_auth_change', syncAuth);
@@ -78,14 +74,6 @@ export default function Navbar() {
     router.push('/login');
   };
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    store.setTheme(nextTheme);
-    document.documentElement.classList.remove('dark', 'light');
-    document.documentElement.classList.add(nextTheme);
-  };
-
   const isLoginPage = pathname === '/login';
   const isSignPage = pathname?.startsWith('/sign/');
   const showNavControls = isLoggedIn && !isLoginPage && !isSignPage;
@@ -98,7 +86,7 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/80 backdrop-blur-md shadow-sm dark:shadow-none">
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -111,12 +99,12 @@ export default function Navbar() {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-bold text-slate-900 dark:text-white tracking-wide text-base">Kia Carens</span>
+                <span className="font-bold text-white tracking-wide text-base">Kia Carens</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800 font-mono font-semibold">
                   KA09MK6792
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Fleet & Partnership Ledger</p>
+              <p className="text-[11px] text-slate-400 font-medium">Fleet & Partnership Ledger</p>
             </div>
           </Link>
 
@@ -132,8 +120,8 @@ export default function Navbar() {
                     href={link.href}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                       isActive
-                        ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-300 dark:border-sky-500/30 font-bold shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
+                        ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -146,15 +134,6 @@ export default function Navbar() {
 
           {/* Controls Right */}
           <div className="hidden sm:flex items-center space-x-3">
-            
-            {/* Theme Toggle Switch */}
-            <button
-              onClick={toggleTheme}
-              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center"
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-500" />}
-            </button>
 
             {/* Cloud Sync Button */}
             {showNavControls && (
@@ -205,14 +184,8 @@ export default function Navbar() {
           {showNavControls && (
             <div className="flex md:hidden items-center space-x-2">
               <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              >
-                {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-500" />}
-              </button>
-              <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
@@ -223,7 +196,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && showNavControls && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 pt-2 pb-4 space-y-2">
+        <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 pt-2 pb-4 space-y-2">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href;
@@ -234,8 +207,8 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
                   isActive
-                    ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-300 dark:border-sky-500/30 font-bold'
-                    : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
+                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30 font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
               >
                 <Icon className="h-4 w-4" />

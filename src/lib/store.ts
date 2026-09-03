@@ -60,7 +60,6 @@ const STORAGE_KEYS = {
   BOOKINGS: 'kc_bookings_v6',
   EXPENSES: 'kc_expenses_v6',
   AUDIT: 'kc_audit_logs_v6',
-  THEME: 'kc_theme_v1',
 };
 
 export const store = {
@@ -93,16 +92,6 @@ export const store = {
   isLoggedIn(): boolean {
     if (typeof window === 'undefined') return false;
     return !!this.getCurrentUser();
-  },
-
-  getTheme(): 'dark' | 'light' {
-    if (typeof window === 'undefined') return 'dark';
-    return (localStorage.getItem(STORAGE_KEYS.THEME) as 'dark' | 'light') || 'dark';
-  },
-
-  setTheme(theme: 'dark' | 'light') {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.THEME, theme);
   },
 
   // --- LOAN STATE & AUTOMATED EMI DEDUCTION ---
@@ -337,42 +326,8 @@ export const store = {
           createdAt: b.created_at,
         }));
 
-        // Push any local items not found in cloud up to Supabase
-        const unsyncedLocal = local.filter(
-          (l) => !cloudFormatted.some((c) => c.id === l.id || (c.guestName === l.guestName && Math.abs(c.totalAmount - l.totalAmount) < 0.01))
-        );
-
-        if (unsyncedLocal.length > 0) {
-          for (const item of unsyncedLocal) {
-            const validId = (item.id.length === 36 && item.id.includes('-')) ? item.id : generateUUID();
-            const payload = {
-              id: validId,
-              guest_name: item.guestName,
-              guest_phone: item.guestPhone,
-              guest_aadhaar: item.guestAadhaar,
-              guest_dl: item.guestDl,
-              source: item.source,
-              start_date: item.startDate,
-              end_date: item.endDate,
-              daily_rate: item.dailyRate,
-              total_amount: item.totalAmount,
-              status: item.status,
-              signature_url: item.signatureUrl,
-              signed_agreement_url: item.signedAgreementUrl,
-              pre_inspection: item.preInspection,
-              post_inspection: item.postInspection,
-              created_by: item.createdBy,
-              created_at: item.createdAt,
-            };
-            const { error: insErr } = await supabase.from('bookings').upsert([payload]);
-            if (!insErr) {
-              item.id = validId;
-              cloudFormatted.unshift(item);
-            }
-          }
-        }
-
-        // Cloud is the source of truth — cloudFormatted already includes successfully pushed local items
+        // Cloud is the source of truth — replace localStorage with cloud data
+        // Do NOT push local-only items back to cloud, as they may have been deleted on another device
         const finalList = cloudFormatted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         if (typeof window !== 'undefined') {
@@ -510,39 +465,8 @@ export const store = {
           createdAt: e.created_at,
         }));
 
-        // Push any local expenses NOT found in cloud up to Supabase
-        const unsyncedLocal = local.filter(
-          (l) => !cloudFormatted.some((c) => c.id === l.id || (c.description === l.description && Math.abs(c.amount - l.amount) < 0.01))
-        );
-
-        if (unsyncedLocal.length > 0) {
-          for (const item of unsyncedLocal) {
-            const validId = (item.id.length === 36 && item.id.includes('-')) ? item.id : generateUUID();
-            const payload = {
-              id: validId,
-              category: item.category,
-              amount: item.amount,
-              description: item.description,
-              bill_photo_url: item.billPhotoUrl,
-              ocr_extracted_data: item.ocrExtractedData,
-              logged_by: item.loggedBy,
-              is_split: item.isSplit,
-              split_amount: item.splitAmount,
-              settled_status: item.settledStatus || 'Pending',
-              settlement_mode: item.settlementMode,
-              settled_at: item.settledAt,
-              settled_by: item.settledBy,
-              created_at: item.createdAt,
-            };
-            const { error: insErr } = await supabase.from('expenses').upsert([payload]);
-            if (!insErr) {
-              item.id = validId;
-              cloudFormatted.unshift(item);
-            }
-          }
-        }
-
-        // Cloud is the source of truth — cloudFormatted already includes successfully pushed local items
+        // Cloud is the source of truth — replace localStorage with cloud data
+        // Do NOT push local-only items back to cloud, as they may have been deleted on another device
         const finalList = cloudFormatted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         if (typeof window !== 'undefined') {
@@ -822,6 +746,19 @@ export const store = {
       )
       .on(
         'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'bookings' },
+        async () => {
+          console.log('[Realtime] bookings DELETE');
+          try {
+            await this.fetchBookingsAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime bookings delete sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'expenses' },
         async () => {
           console.log('[Realtime] expenses INSERT');
@@ -843,6 +780,19 @@ export const store = {
             window.dispatchEvent(new Event('kc_data_sync'));
           } catch (e) {
             console.error('Realtime expenses update sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'expenses' },
+        async () => {
+          console.log('[Realtime] expenses DELETE');
+          try {
+            await this.fetchExpensesAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime expenses delete sync error:', e);
           }
         }
       )
@@ -895,6 +845,19 @@ export const store = {
             window.dispatchEvent(new Event('kc_data_sync'));
           } catch (e) {
             console.error('Realtime audit update sync error:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'audit_logs' },
+        async () => {
+          console.log('[Realtime] audit_logs DELETE');
+          try {
+            await this.fetchAuditLogsAsync();
+            window.dispatchEvent(new Event('kc_data_sync'));
+          } catch (e) {
+            console.error('Realtime audit delete sync error:', e);
           }
         }
       )
