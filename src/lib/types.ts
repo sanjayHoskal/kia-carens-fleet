@@ -109,3 +109,22 @@ export interface LoanState {
   isForeclosed?: boolean;
   foreclosedAt?: string;
 }
+
+export type DocumentSection = 'legal' | 'tax_saving';
+
+export interface CarDocument {
+  id: string;
+  title: string;
+  section: DocumentSection;
+  docType: string;
+  description?: string;
+  fileUrl?: string; // Base64 Data URL or storage link
+  fileName?: string;
+  fileType?: string; // 'pdf' | 'image' | 'doc' | 'other'
+  fileSize?: string;
+  expiryDate?: string;
+  taxCategory?: string; // e.g. 'Depreciation', 'Loan Interest', 'Fuel', 'Servicing', 'TDS'
+  financialYear?: string; // e.g. 'FY 2026-27'
+  uploadedBy: PartnerUser;
+  uploadedAt: string;
+}

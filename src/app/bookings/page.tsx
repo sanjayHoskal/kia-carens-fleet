@@ -23,7 +23,11 @@ import {
   AlertCircle,
   Trash2,
   User,
-  PenTool
+  PenTool,
+  Pencil,
+  Zap,
+  Info,
+  Clock
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Booking, BookingSource, PartnerUser } from '@/lib/types';
@@ -42,10 +46,25 @@ export default function BookingsPage() {
     guestPhone: '',
     guestAadhaar: '',
     guestDl: '',
-    source: 'Private Trip' as BookingSource,
+    source: 'Zoomcar' as BookingSource,
     startDate: '',
     endDate: '',
-    dailyRate: 3500,
+    dailyRate: '' as number | '',
+    totalAmount: '' as number | '',
+  });
+
+  // Edit Booking Modal State
+  const [selectedBookingForEdit, setSelectedBookingForEdit] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState({
+    guestName: '',
+    guestPhone: '',
+    guestAadhaar: '',
+    guestDl: '',
+    source: 'Zoomcar' as BookingSource,
+    startDate: '',
+    endDate: '',
+    totalAmount: '' as number | '',
+    status: 'Confirmed' as Booking['status'],
   });
 
   // Pre-Handover Modal State
@@ -122,44 +141,106 @@ export default function BookingsPage() {
   });
 
   // Handle Add Booking
-  const handleCreateBooking = (e: React.FormEvent) => {
+  const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.guestName || !formData.guestPhone || !formData.guestAadhaar || !formData.guestDl) {
-      alert('Please fill out all required guest detail fields.');
+    if (!formData.guestName) {
+      alert('Please enter guest name.');
       return;
+    }
+
+    if (formData.source !== 'Zoomcar') {
+      if (!formData.guestPhone || !formData.guestAadhaar || !formData.guestDl) {
+        alert('Please fill out all required guest detail fields for non-Zoomcar booking.');
+        return;
+      }
     }
 
     const start = new Date(formData.startDate || Date.now());
     const end = new Date(formData.endDate || Date.now() + 86400000 * 2);
     const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
-    const totalAmount = diffDays * formData.dailyRate;
+
+    let totalAmount = 0;
+    let dailyRate = 0;
+
+    if (formData.source === 'Zoomcar') {
+      totalAmount = Number(formData.totalAmount) || 0;
+      dailyRate = Math.round(totalAmount / diffDays);
+    } else {
+      dailyRate = Number(formData.dailyRate) || 0;
+      totalAmount = diffDays * dailyRate;
+    }
 
     store.addBooking({
       guestName: formData.guestName,
-      guestPhone: formData.guestPhone,
-      guestAadhaar: formData.guestAadhaar,
-      guestDl: formData.guestDl,
+      guestPhone: formData.guestPhone || 'Zoomcar Customer',
+      guestAadhaar: formData.guestAadhaar || 'Zoomcar App Verified',
+      guestDl: formData.guestDl || 'Zoomcar App Verified',
       source: formData.source,
       startDate: start.toISOString(),
       endDate: end.toISOString(),
-      dailyRate: formData.dailyRate,
+      dailyRate: dailyRate,
       totalAmount: totalAmount,
-      status: 'Confirmed',
+      status: formData.source === 'Zoomcar' ? 'Completed' : 'Confirmed',
       createdBy: currentUser,
     });
 
-    refreshBookings();
     setShowAddModal(false);
     setFormData({
       guestName: '',
       guestPhone: '',
       guestAadhaar: '',
       guestDl: '',
-      source: 'Private Trip',
+      source: 'Zoomcar',
       startDate: '',
       endDate: '',
-      dailyRate: 3500,
+      dailyRate: '',
+      totalAmount: '',
     });
+    await refreshBookingsAsync();
+  };
+
+  // Open Edit Booking Modal
+  const handleOpenEditModal = (booking: Booking) => {
+    setSelectedBookingForEdit(booking);
+    setEditForm({
+      guestName: booking.guestName || '',
+      guestPhone: booking.guestPhone || '',
+      guestAadhaar: booking.guestAadhaar || '',
+      guestDl: booking.guestDl || '',
+      source: booking.source,
+      startDate: booking.startDate ? booking.startDate.substring(0, 10) : '',
+      endDate: booking.endDate ? booking.endDate.substring(0, 10) : '',
+      totalAmount: booking.totalAmount || '',
+      status: booking.status,
+    });
+  };
+
+  // Save Edit Booking
+  const handleSaveEditBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBookingForEdit) return;
+
+    const amt = Number(editForm.totalAmount) || 0;
+    const start = editForm.startDate ? new Date(editForm.startDate) : new Date(selectedBookingForEdit.startDate);
+    const end = editForm.endDate ? new Date(editForm.endDate) : new Date(selectedBookingForEdit.endDate);
+    const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+    const dailyRate = Math.round(amt / diffDays);
+
+    store.updateBooking(selectedBookingForEdit.id, {
+      guestName: editForm.guestName,
+      guestPhone: editForm.guestPhone,
+      guestAadhaar: editForm.guestAadhaar || (editForm.source === 'Zoomcar' ? 'Zoomcar App Verified' : ''),
+      guestDl: editForm.guestDl || (editForm.source === 'Zoomcar' ? 'Zoomcar App Verified' : ''),
+      source: editForm.source,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      dailyRate: dailyRate,
+      totalAmount: amt,
+      status: editForm.status,
+    });
+
+    setSelectedBookingForEdit(null);
+    await refreshBookingsAsync();
   };
 
   // Generate Agreement PDF
@@ -452,9 +533,18 @@ export default function BookingsPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Phone: {booking.guestPhone} • DL: {booking.guestDl} • Aadhaar: {booking.guestAadhaar}
-                    </p>
+                    {booking.source === 'Zoomcar' ? (
+                      <p className="text-xs text-slate-400 flex items-center gap-1.5 pt-0.5">
+                        {booking.guestPhone && booking.guestPhone !== 'Zoomcar Customer' && (
+                          <span>Phone: {booking.guestPhone} • </span>
+                        )}
+                        <span className="text-purple-300 font-medium">⚡ Zoomcar Host Booking (KYC & Handover in App)</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-400">
+                        Phone: {booking.guestPhone} • DL: {booking.guestDl} • Aadhaar: {booking.guestAadhaar}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -468,7 +558,7 @@ export default function BookingsPage() {
                   }`}>
                     {booking.status}
                   </span>
-                  <span className="text-lg font-extrabold text-emerald-400">
+                  <span className="text-lg font-extrabold text-emerald-400 font-mono">
                     ₹{booking.totalAmount.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -478,29 +568,41 @@ export default function BookingsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
-                    Dates: {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 font-medium">
+                    Dates Kept: {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
                   </span>
-                  {booking.signatureUrl ? (
-                    <Link
-                      href={`/sign/${booking.id}`}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-semibold flex items-center gap-1 hover:bg-emerald-900/60"
-                    >
-                      <PenTool className="w-3.5 h-3.5" />
-                      <span>Signed ✓</span>
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/sign/${booking.id}`}
-                      className="px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-400 font-semibold flex items-center gap-1 hover:bg-amber-900/60"
-                    >
-                      <PenTool className="w-3.5 h-3.5" />
-                      <span>Sign Needed ✍</span>
-                    </Link>
+
+                  {/* Pre/post handover & signatures only for non-Zoomcar */}
+                  {booking.source !== 'Zoomcar' && (
+                    <>
+                      {booking.signatureUrl ? (
+                        <Link
+                          href={`/sign/${booking.id}`}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-semibold flex items-center gap-1 hover:bg-emerald-900/60"
+                        >
+                          <PenTool className="w-3.5 h-3.5" />
+                          <span>Signed ✓</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/sign/${booking.id}`}
+                          className="px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-400 font-semibold flex items-center gap-1 hover:bg-amber-900/60"
+                        >
+                          <PenTool className="w-3.5 h-3.5" />
+                          <span>Sign Needed ✍</span>
+                        </Link>
+                      )}
+                      {booking.preInspection && (
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium">
+                          ✓ Pre-Inspection ({booking.preInspection.odometerKm} KM, Fuel: {booking.preInspection.fuelLevel}%)
+                        </span>
+                      )}
+                    </>
                   )}
-                  {booking.preInspection && (
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium">
-                      ✓ Pre-Inspection Logged ({booking.preInspection.odometerKm} KM, Fuel: {booking.preInspection.fuelLevel}%)
+
+                  {booking.source === 'Zoomcar' && (
+                    <span className="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-800/80 text-purple-300 text-[11px] font-semibold">
+                      Managed in Zoomcar
                     </span>
                   )}
                 </div>
@@ -508,69 +610,84 @@ export default function BookingsPage() {
                 {/* Action Triggers */}
                 <div className="flex flex-wrap items-center gap-2">
                   
-                  {/* Generate PDF Contract */}
-                  <button
-                    onClick={() => generateAgreementPDF(booking)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Rental Contract PDF</span>
-                  </button>
+                  {/* Features only for non-Zoomcar bookings */}
+                  {booking.source !== 'Zoomcar' && (
+                    <>
+                      {/* Generate PDF Contract */}
+                      <button
+                        onClick={() => generateAgreementPDF(booking)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-sky-400" />
+                        <span>Rental Contract PDF</span>
+                      </button>
 
-                  {/* WhatsApp Greeting Trigger */}
-                  <button
-                    onClick={() => triggerWhatsAppGreeting(booking)}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-300 text-xs font-medium border border-emerald-700 flex items-center space-x-1"
-                  >
-                    <Send className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>WhatsApp Greeting</span>
-                  </button>
+                      {/* WhatsApp Greeting Trigger */}
+                      <button
+                        onClick={() => triggerWhatsAppGreeting(booking)}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-300 text-xs font-medium border border-emerald-700 flex items-center space-x-1"
+                      >
+                        <Send className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>WhatsApp Greeting</span>
+                      </button>
 
-                  {/* Pre-Handover Checklist Trigger */}
-                  {booking.status === 'Confirmed' && (
-                    <button
-                      onClick={() => {
-                        setSelectedBookingForPre(booking);
-                        setPreForm({
-                          frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
-                          backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
-                          leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
-                          rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
-                          fuelLevel: 100,
-                          odometerKm: 42750,
-                        });
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center space-x-1"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>Pre-Handover Checklist</span>
-                    </button>
+                      {/* Pre-Handover Checklist Trigger */}
+                      {booking.status === 'Confirmed' && (
+                        <button
+                          onClick={() => {
+                            setSelectedBookingForPre(booking);
+                            setPreForm({
+                              frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
+                              backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
+                              leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
+                              rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
+                              fuelLevel: 100,
+                              odometerKm: 42750,
+                            });
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center space-x-1"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Pre-Handover Checklist</span>
+                        </button>
+                      )}
+
+                      {/* Post-Return Checklist Trigger */}
+                      {(booking.status === 'Pre-Handover Complete' || booking.status === 'Active') && (
+                        <button
+                          onClick={() => {
+                            setSelectedBookingForPost(booking);
+                            const preOdo = booking.preInspection?.odometerKm || 42750;
+                            setPostForm({
+                              frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
+                              backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
+                              leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
+                              rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
+                              fuelLevel: 90,
+                              odometerKm: preOdo + 380,
+                              allowedKmPerDay: 300,
+                              ratePerExtraKm: 15,
+                              ratePerFuelPct: 45,
+                            });
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Post-Return Offboarding</span>
+                        </button>
+                      )}
+                    </>
                   )}
 
-                  {/* Post-Return Checklist Trigger */}
-                  {(booking.status === 'Pre-Handover Complete' || booking.status === 'Active') && (
-                    <button
-                      onClick={() => {
-                        setSelectedBookingForPost(booking);
-                        const preOdo = booking.preInspection?.odometerKm || 42750;
-                        setPostForm({
-                          frontPhoto: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=500&auto=format&fit=crop&q=80',
-                          backPhoto: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80',
-                          leftPhoto: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&auto=format&fit=crop&q=80',
-                          rightPhoto: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500&auto=format&fit=crop&q=80',
-                          fuelLevel: 90,
-                          odometerKm: preOdo + 380,
-                          allowedKmPerDay: 300,
-                          ratePerExtraKm: 15,
-                          ratePerFuelPct: 45,
-                        });
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Post-Return Offboarding</span>
-                    </button>
-                  )}
+                  {/* EDIT DETAILS BUTTON (Req 5: Edit details of user & total amount) */}
+                  <button
+                    onClick={() => handleOpenEditModal(booking)}
+                    title="Edit booking guest details and total amount"
+                    className="px-2.5 py-1.5 rounded-lg bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 text-xs font-semibold transition-all flex items-center space-x-1"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Edit</span>
+                  </button>
 
                   {/* Delete Booking Trigger */}
                   <button
@@ -627,35 +744,63 @@ export default function BookingsPage() {
                       type="button"
                       key={src}
                       onClick={() => setFormData({ ...formData, source: src })}
-                      className={`py-2 rounded-lg font-bold border transition-all ${
+                      className={`py-2 rounded-lg font-bold border transition-all text-xs ${
                         formData.source === src
                           ? 'bg-sky-600 border-sky-500 text-white shadow-md'
-                          : 'bg-slate-900 border-slate-800 text-slate-400'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
                       }`}
                     >
-                      {src}
+                      {src === 'Zoomcar' ? '⚡ Zoomcar' : src}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* Informative notice for Zoomcar vs other bookings */}
+              {formData.source === 'Zoomcar' ? (
+                <div className="p-3 bg-purple-950/40 border border-purple-800/60 rounded-xl space-y-1">
+                  <div className="flex items-center space-x-1.5 text-purple-300 font-semibold text-[11px]">
+                    <Zap className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Simplified Zoomcar Entry</span>
+                  </div>
+                  <p className="text-[11px] text-purple-200/80 leading-relaxed">
+                    Pre/post inspections, fuel & odometer readings, KYC verification, and rental agreements are managed directly inside the Zoomcar Host app. Simply enter basic guest details, rental dates, and total payout amount.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl space-y-1">
+                  <div className="flex items-center space-x-1.5 text-sky-300 font-semibold text-[11px]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Direct Fleet Booking Workflow</span>
+                  </div>
+                  <p className="text-[11px] text-sky-200/80 leading-relaxed">
+                    Full verification flow with KYC documents, digital rental agreements, odometer logging, and pre/post handover inspections.
+                  </p>
+                </div>
+              )}
+
+              {/* Basic User Details (Req 4) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Guest Full Name</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">
+                    {formData.source === 'Zoomcar' ? 'Guest / Booking Name *' : 'Guest Full Name *'}
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Ramesh Kumar"
+                    placeholder={formData.source === 'Zoomcar' ? 'e.g. Ramesh K / Zoomcar Trip' : 'e.g. Ramesh Kumar'}
                     value={formData.guestName}
                     onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Mobile Phone (WhatsApp)</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">
+                    {formData.source === 'Zoomcar' ? 'Mobile Phone (Optional)' : 'Mobile Phone (WhatsApp) *'}
+                  </label>
                   <input
                     type="text"
-                    required
+                    required={formData.source !== 'Zoomcar'}
                     placeholder="+91 98765 43210"
                     value={formData.guestPhone}
                     onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
@@ -664,34 +809,38 @@ export default function BookingsPage() {
                 </div>
               </div>
 
+              {/* Aadhaar and DL only for non-Zoomcar bookings */}
+              {formData.source !== 'Zoomcar' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Aadhaar Card Number *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="12-digit Aadhaar"
+                      value={formData.guestAadhaar}
+                      onChange={(e) => setFormData({ ...formData, guestAadhaar: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Driving License (DL) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="KA-09-2022-XXXXX"
+                      value={formData.guestDl}
+                      onChange={(e) => setFormData({ ...formData, guestDl: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Dates User Kept Car (Req 4) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Aadhaar Card Number</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="12-digit Aadhaar"
-                    value={formData.guestAadhaar}
-                    onChange={(e) => setFormData({ ...formData, guestAadhaar: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Driving License (DL)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="KA-09-2022-XXXXX"
-                    value={formData.guestDl}
-                    onChange={(e) => setFormData({ ...formData, guestDl: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Start Date</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">Trip Start Date *</label>
                   <input
                     type="date"
                     required
@@ -701,7 +850,7 @@ export default function BookingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">End Date</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">Trip End Date *</label>
                   <input
                     type="date"
                     required
@@ -710,31 +859,214 @@ export default function BookingsPage() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
                   />
                 </div>
+              </div>
+
+              {/* Total Amount Details (Req 3, 4: direct total amount for Zoomcar, no leading 0) */}
+              {formData.source === 'Zoomcar' ? (
                 <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Daily Rate (₹)</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">
+                    Total Amount / Host Payout (₹) *
+                  </label>
                   <input
                     type="number"
                     required
-                    value={formData.dailyRate}
-                    onChange={(e) => setFormData({ ...formData, dailyRate: Number(e.target.value) })}
+                    placeholder="Enter total amount (e.g. 7500)"
+                    value={formData.totalAmount === 0 ? '' : formData.totalAmount}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Direct payout earned from Zoomcar (no daily calculation required).
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Daily Rate (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="e.g. 3500"
+                      value={formData.dailyRate === 0 ? '' : formData.dailyRate}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Calculated Total (₹)</label>
+                    <div className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-emerald-400 font-mono text-sm font-bold flex items-center justify-between">
+                      <span>₹{(() => {
+                        const s = new Date(formData.startDate || Date.now());
+                        const end = new Date(formData.endDate || Date.now());
+                        const days = Math.max(1, Math.ceil((end.getTime() - s.getTime()) / (1000 * 3600 * 24)));
+                        return (days * (Number(formData.dailyRate) || 0)).toLocaleString('en-IN');
+                      })()}</span>
+                      <span className="text-[10px] text-slate-500 font-normal">Auto-calc</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/30 flex items-center space-x-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Save Booking</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Booking Details & Total Amount (Req 5) */}
+      {selectedBookingForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="glass-card w-full max-w-lg p-6 rounded-2xl border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Pencil className="w-5 h-5 text-sky-400" />
+                <div>
+                  <h2 className="text-base font-bold text-white">Edit Booking Details & Total Amount</h2>
+                  <p className="text-[11px] text-slate-400">ID: {selectedBookingForEdit.id} • Channel: {selectedBookingForEdit.source}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedBookingForEdit(null)} 
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditBooking} className="space-y-4 text-xs">
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Guest / Booking Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.guestName}
+                    onChange={(e) => setEditForm({ ...editForm, guestName: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Mobile Phone</label>
+                  <input
+                    type="text"
+                    value={editForm.guestPhone}
+                    onChange={(e) => setEditForm({ ...editForm, guestPhone: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              {/* Show DL / Aadhaar for non-Zoomcar bookings */}
+              {editForm.source !== 'Zoomcar' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Aadhaar Card Number</label>
+                    <input
+                      type="text"
+                      value={editForm.guestAadhaar}
+                      onChange={(e) => setEditForm({ ...editForm, guestAadhaar: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Driving License (DL)</label>
+                    <input
+                      type="text"
+                      value={editForm.guestDl}
+                      onChange={(e) => setEditForm({ ...editForm, guestDl: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Dates user kept car */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Start Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editForm.startDate}
+                    onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">End Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editForm.endDate}
+                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              {/* Edit Total Amount (Req 5: direct edit of total amount, without leading 0) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Total Amount Details (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Enter amount"
+                    value={editForm.totalAmount === 0 ? '' : editForm.totalAmount}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setEditForm({ ...editForm, totalAmount: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Booking Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Pre-Handover Complete">Pre-Handover Complete</option>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold"
+                  onClick={() => setSelectedBookingForEdit(null)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold shadow-lg shadow-sky-600/30"
+                  className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/30 flex items-center space-x-1.5"
                 >
-                  Create Booking & Pre-Onboard
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Save Changes</span>
                 </button>
               </div>
 

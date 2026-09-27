@@ -1,4 +1,4 @@
-import { Booking, Expense, AuditLog, LoanState, PartnerUser } from './types';
+import { Booking, Expense, AuditLog, LoanState, PartnerUser, CarDocument, DocumentSection } from './types';
 import { supabase } from './supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -54,12 +54,123 @@ const INITIAL_AUDIT_LOGS: AuditLog[] = [
   }
 ];
 
+const INITIAL_DOCUMENTS: CarDocument[] = [
+  {
+    id: 'doc-legal-01',
+    title: 'Kia Carens RC Smart Card (KA09MK6792)',
+    section: 'legal',
+    docType: 'Registration Certificate (RC)',
+    description: 'Official Ministry of Road Transport & Highways (MoRTH) / VAHAN registered RC smart card copy. Vehicle Class: LMV-Car, Fuel: Diesel, Registered at RTO Mysore West.',
+    fileName: 'Kia_Carens_KA09MK6792_RC.pdf',
+    fileType: 'pdf',
+    fileSize: '1.4 MB',
+    expiryDate: '2039-08-15',
+    uploadedBy: 'Sanjay P',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-legal-02',
+    title: 'Comprehensive Zero-Dep Motor Insurance Policy',
+    section: 'legal',
+    docType: 'Insurance Policy',
+    description: '1st Party Bumper-to-Bumper Comprehensive Insurance Policy with Zero Depreciation, Engine & Gearbox Protection, Key Replacement, and 24x7 Roadside Assistance.',
+    fileName: 'Kia_Carens_Insurance_Policy_2026_27.pdf',
+    fileType: 'pdf',
+    fileSize: '2.8 MB',
+    expiryDate: '2027-08-14',
+    uploadedBy: 'Sanjay P',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-legal-03',
+    title: 'Pollution Under Control Certificate (PUCC)',
+    section: 'legal',
+    docType: 'PUC Certificate',
+    description: 'MoRTH centralized computerized emission test compliance record with valid QR code.',
+    fileName: 'Kia_Carens_PUCC_Valid.pdf',
+    fileType: 'pdf',
+    fileSize: '450 KB',
+    expiryDate: '2027-02-28',
+    uploadedBy: 'Sachin V',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-legal-04',
+    title: 'Cars24 NBFC Loan Sanction Letter & Form 34 Endorsement',
+    section: 'legal',
+    docType: 'Loan & Hypothecation',
+    description: 'Official financier sanction document for ₹11,81,000 principal at ₹20,918/month EMI with Form 34 vehicle hypothecation notation.',
+    fileName: 'Cars24_Loan_Agreement_Hypothecation.pdf',
+    fileType: 'pdf',
+    fileSize: '3.1 MB',
+    uploadedBy: 'Sanjay P',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-tax-01',
+    title: 'Fleet Vehicle Depreciation Statement (15% WDV)',
+    section: 'tax_saving',
+    docType: 'Depreciation Schedule (Sec 32)',
+    taxCategory: 'Depreciation',
+    financialYear: 'FY 2026-27',
+    description: 'Depreciation schedule under Section 32 of Indian Income Tax Act. 15% Written Down Value (WDV) depreciation claimed on commercial/rental fleet asset to offset rental revenue.',
+    fileName: 'Carens_Depreciation_Schedule_FY26-27.pdf',
+    fileType: 'pdf',
+    fileSize: '890 KB',
+    uploadedBy: 'Sanjay P',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-tax-02',
+    title: 'Cars24 Vehicle Loan Interest Certificate',
+    section: 'tax_saving',
+    docType: 'Loan Interest Certificate (Sec 36)',
+    taxCategory: 'Loan Interest',
+    financialYear: 'FY 2026-27',
+    description: 'Annual interest certificate from Cars24 Financial Services. 100% of interest component paid on vehicle loan is tax-deductible as business borrowing cost under Section 36(1)(iii).',
+    fileName: 'Cars24_Interest_Certificate_FY26-27.pdf',
+    fileType: 'pdf',
+    fileSize: '1.2 MB',
+    uploadedBy: 'Sanjay P',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-tax-03',
+    title: 'Kia Authorized Service Center Invoices (10K / 20K KM)',
+    section: 'tax_saving',
+    docType: 'Service & Maintenance Invoices (Sec 37)',
+    taxCategory: 'Maintenance',
+    financialYear: 'FY 2026-27',
+    description: 'Official tax invoices from Kia Authorized Service Center for routine synthetic oil changes, wheel balancing, brake inspection, and wear-and-tear repairs deductible under Sec 37(1).',
+    fileName: 'Kia_Workshop_Service_Bills_FY26-27.pdf',
+    fileType: 'pdf',
+    fileSize: '2.1 MB',
+    uploadedBy: 'Sachin V',
+    uploadedAt: new Date().toISOString(),
+  },
+  {
+    id: 'doc-tax-04',
+    title: 'Zoomcar Host Earnings & TDS Statement (Form 16A)',
+    section: 'tax_saving',
+    docType: 'Platform TDS Statement (Sec 194C)',
+    taxCategory: 'TDS & Platform Fees',
+    financialYear: 'FY 2026-27',
+    description: 'Platform commission debit notes, GST input invoices, and Form 16A quarterly TDS certificates showing tax deducted at source under Section 194C / 194-IB by Zoomcar.',
+    fileName: 'Zoomcar_TDS_Statement_Form16A.pdf',
+    fileType: 'pdf',
+    fileSize: '1.6 MB',
+    uploadedBy: 'Sanjay P',
+    uploadedAt: new Date().toISOString(),
+  }
+];
+
 const STORAGE_KEYS = {
   CURRENT_USER: 'kc_current_user_v7',
   LOAN: 'kc_loan_state_v7',
   BOOKINGS: 'kc_bookings_v7',
   EXPENSES: 'kc_expenses_v7',
   AUDIT: 'kc_audit_logs_v7',
+  DOCUMENTS: 'kc_car_documents_v1',
 };
 
 // Self-healing migration: wipe legacy localStorage keys (v1-v6) across all devices on load
@@ -408,15 +519,29 @@ export const store = {
     }
 
     const sbUpdates: any = {};
-    if (updates.status) sbUpdates.status = updates.status;
-    if (updates.signatureUrl) sbUpdates.signature_url = updates.signatureUrl;
-    if (updates.signedAgreementUrl) sbUpdates.signed_agreement_url = updates.signedAgreementUrl;
-    if (updates.preInspection) sbUpdates.pre_inspection = updates.preInspection;
-    if (updates.postInspection) sbUpdates.post_inspection = updates.postInspection;
+    if (updates.status !== undefined) sbUpdates.status = updates.status;
+    if (updates.signatureUrl !== undefined) sbUpdates.signature_url = updates.signatureUrl;
+    if (updates.signedAgreementUrl !== undefined) sbUpdates.signed_agreement_url = updates.signedAgreementUrl;
+    if (updates.preInspection !== undefined) sbUpdates.pre_inspection = updates.preInspection;
+    if (updates.postInspection !== undefined) sbUpdates.post_inspection = updates.postInspection;
+    if (updates.guestName !== undefined) sbUpdates.guest_name = updates.guestName;
+    if (updates.guestPhone !== undefined) sbUpdates.guest_phone = updates.guestPhone;
+    if (updates.guestAadhaar !== undefined) sbUpdates.guest_aadhaar = updates.guestAadhaar;
+    if (updates.guestDl !== undefined) sbUpdates.guest_dl = updates.guestDl;
+    if (updates.source !== undefined) sbUpdates.source = updates.source;
+    if (updates.startDate !== undefined) sbUpdates.start_date = updates.startDate;
+    if (updates.endDate !== undefined) sbUpdates.end_date = updates.endDate;
+    if (updates.dailyRate !== undefined) sbUpdates.daily_rate = updates.dailyRate;
+    if (updates.totalAmount !== undefined) sbUpdates.total_amount = updates.totalAmount;
 
     supabase.from('bookings').update(sbUpdates).eq('id', id).then(({ error }) => {
       if (error) console.error('Supabase update booking error:', error);
     });
+
+    if (updates.guestName || updates.totalAmount) {
+      const savedDoc = updatedItem as Booking | null;
+      this.addAuditLog('Updated Booking Details', `Updated booking for ${savedDoc?.guestName || 'Guest'} (Amount: ₹${(savedDoc?.totalAmount || 0).toLocaleString('en-IN')})`);
+    }
 
     return updatedItem;
   },
@@ -902,6 +1027,74 @@ export const store = {
       .subscribe((status) => {
         console.log('[Realtime] Subscription status:', status);
       });
+  },
+
+  // --- CAR DOCUMENTS REPOSITORY ---
+  getCarDocuments(): CarDocument[] {
+    if (typeof window === 'undefined') return INITIAL_DOCUMENTS;
+    const data = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
+    if (!data) {
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(INITIAL_DOCUMENTS));
+      return INITIAL_DOCUMENTS;
+    }
+    try {
+      return JSON.parse(data);
+    } catch {
+      return INITIAL_DOCUMENTS;
+    }
+  },
+
+  addCarDocument(doc: Omit<CarDocument, 'id' | 'uploadedAt'>): CarDocument {
+    const current = this.getCarDocuments();
+    const newDoc: CarDocument = {
+      ...doc,
+      id: generateUUID(),
+      uploadedAt: new Date().toISOString(),
+    };
+    const updated = [newDoc, ...current];
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(updated));
+    }
+    this.addAuditLog(
+      'Document Uploaded',
+      `Uploaded ${doc.section === 'legal' ? 'Legal' : 'Tax Saving'} Document: ${doc.title}`
+    );
+    window.dispatchEvent(new Event('kc_docs_sync'));
+    return newDoc;
+  },
+
+  updateCarDocument(id: string, updates: Partial<CarDocument>): CarDocument | null {
+    const current = this.getCarDocuments();
+    let updatedDoc: CarDocument | null = null;
+    const updatedList = current.map((item) => {
+      if (item.id === id) {
+        updatedDoc = { ...item, ...updates };
+        return updatedDoc;
+      }
+      return item;
+    });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(updatedList));
+    }
+    window.dispatchEvent(new Event('kc_docs_sync'));
+    return updatedDoc;
+  },
+
+  deleteCarDocument(id: string): boolean {
+    const current = this.getCarDocuments();
+    const target = current.find((d) => d.id === id);
+    const updated = current.filter((d) => d.id !== id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(updated));
+    }
+    if (target) {
+      this.addAuditLog(
+        'Document Deleted',
+        `Deleted ${target.section === 'legal' ? 'Legal' : 'Tax Saving'} document: ${target.title}`
+      );
+    }
+    window.dispatchEvent(new Event('kc_docs_sync'));
+    return true;
   },
 
   unsubscribeFromRealtimeChanges() {

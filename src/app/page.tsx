@@ -37,11 +37,8 @@ export default function Dashboard() {
   const [syncToast, setSyncToast] = useState<string>('');
 
   // Modals state
-  const [showResetModal, setShowResetModal] = useState(false);
   const [showEmiModal, setShowEmiModal] = useState(false);
   const [showForeclosureModal, setShowForeclosureModal] = useState(false);
-  const [resetLoanAmount, setResetLoanAmount] = useState(1181000);
-  const [resetEmiAmount, setResetEmiAmount] = useState(20918);
 
   const loadDataFromCloud = async () => {
     setIsSyncing(true);
@@ -135,18 +132,6 @@ export default function Dashboard() {
 
   const activeBooking = bookings.find((b) => b.status === 'Active');
 
-  const handleConfirmFactoryReset = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resetLoanAmount || resetLoanAmount <= 0) {
-      alert('Please enter a valid loan principal amount.');
-      return;
-    }
-
-    store.resetToFreshState(Number(resetLoanAmount), Number(resetEmiAmount));
-    setShowResetModal(false);
-    window.location.reload();
-  };
-
   return (
     <div className="space-y-6">
       
@@ -192,18 +177,6 @@ export default function Dashboard() {
             <Receipt className="w-4 h-4 text-amber-400" />
             <span className="text-white">Scan Receipt (OCR)</span>
           </Link>
-          <button
-            onClick={() => {
-              setResetLoanAmount(loan.initialPrincipal);
-              setResetEmiAmount(loan.monthlyEmi);
-              setShowResetModal(true);
-            }}
-            title="Factory Reset & Set Custom Loan Amount"
-            className="p-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800 text-xs transition-all flex items-center gap-1.5 font-semibold"
-          >
-            <RotateCcw className="w-4 h-4 text-rose-400" />
-            <span className="hidden sm:inline">Factory Reset</span>
-          </button>
         </div>
       </div>
 
@@ -538,79 +511,6 @@ export default function Dashboard() {
         </div>
 
       </div>
-
-      {/* FACTORY RESET CAUTION MODAL */}
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="glass-card w-full max-w-md p-6 rounded-2xl border-rose-500/40 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <div className="flex items-center space-x-2 text-rose-400">
-                <ShieldAlert className="w-6 h-6" />
-                <h2 className="text-lg font-bold text-white">Factory Reset & Initial Setup</h2>
-              </div>
-              <button onClick={() => setShowResetModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl space-y-1">
-              <span className="text-xs font-bold text-rose-300 block uppercase tracking-wider">
-                ⚠️ Caution: Data Reset Notice
-              </span>
-              <p className="text-xs text-rose-200/90 leading-relaxed">
-                Performing a Factory Reset will purge all logged bookings, OCR receipt scans, and audit logs. The loan balance will be re-initialized from scratch.
-              </p>
-            </div>
-
-            <form onSubmit={handleConfirmFactoryReset} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Initial Vehicle Loan Principal Amount (₹)
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={resetLoanAmount}
-                  onChange={(e) => setResetLoanAmount(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-rose-500"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">Default pre-filled: ₹11,81,000</p>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Monthly EMI Amount (₹)
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={resetEmiAmount}
-                  onChange={(e) => setResetEmiAmount(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-rose-500"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">Default pre-filled: ₹21,000</p>
-              </div>
-
-              <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowResetModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Confirm Factory Reset</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Automated EMI & Amortization Management Modal */}
       {showEmiModal && (

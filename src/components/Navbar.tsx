@@ -9,6 +9,7 @@ import {
   CalendarCheck2, 
   Receipt, 
   TrendingUp, 
+  FolderArchive,
   ShieldCheck, 
   UserCheck, 
   CheckCircle2, 
@@ -17,10 +18,14 @@ import {
   LogOut,
   Lock,
   RefreshCw,
-  Cloud
+  Cloud,
+  Settings,
+  ShieldAlert,
+  RotateCcw,
+  AlertTriangle
 } from 'lucide-react';
 import { store } from '@/lib/store';
-import { PartnerUser } from '@/lib/types';
+import { PartnerUser, LoanState } from '@/lib/types';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -30,6 +35,15 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+  
+  // Safe System Settings & Danger Zone Modal State
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [loan, setLoan] = useState<LoanState>(store.getLoanState());
+  const [resetPrincipal, setResetPrincipal] = useState(1181000);
+  const [resetEmi, setResetEmi] = useState(20918);
+  const [confirmPhrase, setConfirmPhrase] = useState('');
+  const [ackChecked, setAckChecked] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleCloudSync = async () => {
     setIsSyncing(true);
@@ -47,6 +61,7 @@ export default function Navbar() {
     const syncAuth = () => {
       setCurrentUser(store.getCurrentUser());
       setIsLoggedIn(store.isLoggedIn());
+      setLoan(store.getLoanState());
     };
 
     syncAuth();
@@ -56,14 +71,38 @@ export default function Navbar() {
     document.documentElement.classList.add('dark');
 
     window.addEventListener('kc_auth_change', syncAuth);
-    return () => window.removeEventListener('kc_auth_change', syncAuth);
+    window.addEventListener('kc_data_sync', syncAuth);
+    return () => {
+      window.removeEventListener('kc_auth_change', syncAuth);
+      window.removeEventListener('kc_data_sync', syncAuth);
+    };
   }, []);
 
-  const handleSwitchUser = (user: PartnerUser) => {
-    store.setCurrentUser(user);
-    setCurrentUser(user);
-    store.addAuditLog('Switched Active Session', `Session switched to ${user}`);
-    window.location.reload();
+  const handleExecuteFactoryReset = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ackChecked || confirmPhrase.trim().toUpperCase() !== 'RESET') {
+      alert('Please check the confirmation box and type RESET to execute factory reset.');
+      return;
+    }
+
+    if (!resetPrincipal || resetPrincipal <= 0) {
+      alert('Please enter a valid loan principal amount.');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      store.resetToFreshState(Number(resetPrincipal), Number(resetEmi));
+      setShowSettingsModal(false);
+      setConfirmPhrase('');
+      setAckChecked(false);
+      window.location.reload();
+    } catch (err) {
+      console.error('Error during factory reset:', err);
+      alert('Factory reset failed. Please check network/database connection.');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -83,6 +122,7 @@ export default function Navbar() {
     { href: '/bookings', label: 'Bookings', icon: CalendarCheck2 },
     { href: '/expenses', label: 'Expenses & OCR', icon: Receipt },
     { href: '/analytics', label: 'P&L Reports', icon: TrendingUp },
+    { href: '/documents', label: 'Car Documents', icon: FolderArchive },
   ];
 
   return (
@@ -162,6 +202,23 @@ export default function Navbar() {
                   <span>Admin</span>
                 </div>
 
+                {/* System Settings & Safe Danger Zone Button */}
+                <button
+                  onClick={() => {
+                    const l = store.getLoanState();
+                    setLoan(l);
+                    setResetPrincipal(l.initialPrincipal);
+                    setResetEmi(l.monthlyEmi);
+                    setConfirmPhrase('');
+                    setAckChecked(false);
+                    setShowSettingsModal(true);
+                  }}
+                  title="System Settings & Maintenance"
+                  className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all flex items-center justify-center"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}
@@ -218,14 +275,23 @@ export default function Navbar() {
           })}
 
           <div className="pt-3 border-t border-slate-800 space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-purple-950/60 border border-purple-800 text-purple-300 text-xs font-semibold">
-              <div className="flex items-center space-x-2">
-                <Lock className="h-4 w-4 text-purple-400" />
-                <span>Admin Session Active</span>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900 text-purple-200 border border-purple-700">Master</span>
-            </div>
-            
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                const l = store.getLoanState();
+                setLoan(l);
+                setResetPrincipal(l.initialPrincipal);
+                setResetEmi(l.monthlyEmi);
+                setConfirmPhrase('');
+                setAckChecked(false);
+                setShowSettingsModal(true);
+              }}
+              className="w-full py-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-semibold text-xs flex items-center justify-center space-x-2 hover:bg-slate-850"
+            >
+              <Settings className="w-4 h-4 text-sky-400" />
+              <span>System Settings & Maintenance</span>
+            </button>
+
             <button
               onClick={handleLogout}
               className="w-full py-2.5 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 font-semibold text-xs flex items-center justify-center space-x-2"
@@ -236,6 +302,167 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* SAFE SYSTEM SETTINGS & DANGER ZONE MODAL */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="glass-card w-full max-w-lg p-6 rounded-2xl border-slate-800 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-white">
+                <Settings className="w-5 h-5 text-sky-400" />
+                <h2 className="text-base font-bold">System Configuration & Maintenance</h2>
+              </div>
+              <button 
+                onClick={() => setShowSettingsModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Vehicle & Loan Overview */}
+            <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Car className="w-4 h-4 text-sky-400" />
+                  <span className="text-xs font-bold text-white">Kia Carens (KA09MK6792)</span>
+                </div>
+                <span className="text-[11px] px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800 font-mono">
+                  Cars24 Financed
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Remaining Principal</span>
+                  <span className="font-bold text-sky-400 font-mono text-sm">
+                    ₹{loan.currentPrincipal.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Monthly EMI</span>
+                  <span className="font-bold text-white font-mono text-sm">
+                    ₹{loan.monthlyEmi.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Last Processed EMI</span>
+                  <span className="font-medium text-slate-300">
+                    {loan.lastDeductedMonth || 'Aug 2026'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Auto 1st-of-Month Rule</span>
+                  <span className={`font-semibold ${loan.autoDeductEnabled !== false ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {loan.autoDeductEnabled !== false ? '● Active' : '○ Disabled'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Safe Protected Danger Zone */}
+            <div className="border border-rose-800/80 bg-rose-950/20 rounded-xl p-4 space-y-4">
+              <div className="flex items-start space-x-2 text-rose-400">
+                <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-rose-300">
+                    Protected Danger Zone: Factory Reset
+                  </h3>
+                  <p className="text-[11px] text-rose-200/80 mt-0.5 leading-relaxed">
+                    Safely isolated from daily operation. Executing Factory Reset will purge all logged bookings, OCR scans, and audit logs. The loan principal and EMI schedule will be re-initialized.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleExecuteFactoryReset} className="space-y-3 pt-1 text-xs">
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1 text-[11px]">
+                      Loan Principal (₹)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={resetPrincipal || ''}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setResetPrincipal(e.target.value === '' ? ('' as any) : Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:border-rose-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1 text-[11px]">
+                      Monthly EMI (₹)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={resetEmi || ''}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setResetEmi(e.target.value === '' ? ('' as any) : Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:border-rose-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Safety Checkbox */}
+                <label className="flex items-start space-x-2.5 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={ackChecked}
+                    onChange={(e) => setAckChecked(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-700 text-rose-600 focus:ring-rose-500 h-4 w-4 bg-slate-900"
+                  />
+                  <span className="text-[11px] text-slate-300 select-none">
+                    I acknowledge this permanently deletes all booking and expense ledger data.
+                  </span>
+                </label>
+
+                {/* Confirmation Word Input */}
+                <div>
+                  <label className="block text-slate-400 mb-1 text-[11px]">
+                    Type <span className="font-mono font-bold text-rose-400">RESET</span> to unlock button:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Type RESET here"
+                    value={confirmPhrase}
+                    onChange={(e) => setConfirmPhrase(e.target.value)}
+                    className="w-full bg-slate-900 border border-rose-900/60 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:border-rose-500"
+                  />
+                </div>
+
+                {/* Action Button */}
+                <div className="pt-2 flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsModal(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!ackChecked || confirmPhrase.trim().toUpperCase() !== 'RESET' || isResetting}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 shadow-md ${
+                      ackChecked && confirmPhrase.trim().toUpperCase() === 'RESET' && !isResetting
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30 cursor-pointer'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+                    <span>{isResetting ? 'Resetting...' : 'Execute Factory Reset'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </header>
   );
 }
