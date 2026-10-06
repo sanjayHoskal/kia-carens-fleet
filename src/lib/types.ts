@@ -57,7 +57,8 @@ export interface Booking {
   startTime?: string;
   endTime?: string;
   carWashCharge?: number;
-  signatureUrl?: string;
+  signatureUrl?: string; // Used as Host signature
+  guestSignatureUrl?: string; // Used as Guest signature
   signedAgreementUrl?: string;
   preInspection?: PreHandoverInspection;
   postInspection?: PostReturnInspection;

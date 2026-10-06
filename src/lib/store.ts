@@ -448,6 +448,7 @@ export const store = {
           totalAmount: Number(b.total_amount),
           status: b.status,
           signatureUrl: b.signature_url,
+          guestSignatureUrl: b.guest_signature_url,
           signedAgreementUrl: b.signed_agreement_url,
           preInspection: b.pre_inspection,
           postInspection: b.post_inspection,
@@ -521,6 +522,7 @@ export const store = {
     const sbUpdates: any = {};
     if (updates.status !== undefined) sbUpdates.status = updates.status;
     if (updates.signatureUrl !== undefined) sbUpdates.signature_url = updates.signatureUrl;
+    if (updates.guestSignatureUrl !== undefined) sbUpdates.guest_signature_url = updates.guestSignatureUrl;
     if (updates.signedAgreementUrl !== undefined) sbUpdates.signed_agreement_url = updates.signedAgreementUrl;
     if (updates.preInspection !== undefined) sbUpdates.pre_inspection = updates.preInspection;
     if (updates.postInspection !== undefined) sbUpdates.post_inspection = updates.postInspection;

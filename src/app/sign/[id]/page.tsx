@@ -40,7 +40,7 @@ export default function GuestSignaturePage() {
         }
         if (match) {
           setBooking(match);
-          if (match.signatureUrl) {
+          if (match.guestSignatureUrl) {
             setSigned(true);
           }
         }
@@ -107,17 +107,17 @@ export default function GuestSignaturePage() {
     const dataUrl = canvas ? canvas.toDataURL() : '';
 
     const updated = store.updateBooking(booking.id, {
-      signatureUrl: dataUrl,
+      guestSignatureUrl: dataUrl,
       signedAgreementUrl: 'Signed_Agreement_Verified.pdf',
     });
 
     if (updated) {
       setBooking(updated);
     } else {
-      setBooking((prev) => prev ? { ...prev, signatureUrl: dataUrl } : null);
+      setBooking((prev) => prev ? { ...prev, guestSignatureUrl: dataUrl } : null);
     }
 
-    store.addAuditLog('Host Signed Agreement', `Host digitally signed rental agreement for ${booking.id}`);
+    store.addAuditLog('Guest Signed Agreement', `Guest digitally signed rental agreement for ${booking.id}`);
     setSigned(true);
   };
 
@@ -162,18 +162,34 @@ export default function GuestSignaturePage() {
     doc.setFontSize(10);
     doc.text('Lessor Signature: Sanjay P / Sachin V', 25, 195);
     
+    const finalY = 190;
+    // Host Signature block
     if (booking.signatureUrl) {
-      doc.text('Host Digital Signature (Verified):', 110, 188);
+      doc.text('Host Signature:', 20, finalY);
       try {
-        doc.addImage(booking.signatureUrl, 'PNG', 110, 190, 50, 20);
+        doc.addImage(booking.signatureUrl, 'PNG', 20, finalY + 2, 50, 20);
       } catch (err) {
-        console.error('PDF Signature error:', err);
+        console.error('Error adding host signature image to PDF:', err);
+        doc.text('[Host Signature]', 20, finalY + 10);
       }
     } else {
-      doc.text('Host Digital Signature: ______________________', 110, 195);
+      doc.text('Host Signature:', 20, finalY);
+      doc.text('_________________________', 20, finalY + 10);
     }
-    
-    doc.text('Guest Signature: ______________________', 25, 220);
+
+    // Guest Signature block
+    if (booking.guestSignatureUrl) {
+      doc.text('Guest Signature:', 110, finalY);
+      try {
+        doc.addImage(booking.guestSignatureUrl, 'PNG', 110, finalY + 2, 50, 20);
+      } catch (err) {
+        console.error('Error adding guest signature image to PDF:', err);
+        doc.text('[Guest Signature]', 110, finalY + 10);
+      }
+    } else {
+      doc.text('Guest Signature:', 110, finalY);
+      doc.text('_________________________', 110, finalY + 10);
+    }
 
     doc.save(`Kia_Carens_Rental_Agreement_${booking.guestName.replace(/\s+/g, '_')}.pdf`);
   };
@@ -197,7 +213,7 @@ export default function GuestSignaturePage() {
           <Car className="w-6 h-6" />
         </div>
         <h1 className="text-xl font-bold text-white">Kia Carens (KA09MK6792) Rental Agreement</h1>
-        <p className="text-xs text-slate-400">Digital Document Verification & Host Signature Portal</p>
+        <p className="text-xs text-slate-400">Digital Document Verification & Guest Signature Portal</p>
       </div>
 
       {signed ? (
@@ -210,11 +226,11 @@ export default function GuestSignaturePage() {
             The rental contract for Kia Carens (KA09MK6792) has been recorded with a verified timestamp for guest <strong>{booking.guestName}</strong>.
           </p>
 
-          {booking.signatureUrl && (
+          {booking.guestSignatureUrl && (
             <div className="my-4 p-4 bg-slate-900/90 rounded-xl border border-emerald-500/30 inline-block">
               <span className="text-xs text-slate-400 block mb-2 font-semibold">Recorded Digital Signature:</span>
               <img
-                src={booking.signatureUrl}
+                src={booking.guestSignatureUrl}
                 alt="Digital Signature"
                 className="max-h-24 mx-auto bg-white p-2 rounded-lg border border-slate-700 shadow-md"
               />

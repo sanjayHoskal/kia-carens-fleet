@@ -361,17 +361,27 @@ export default function BookingsPage() {
     doc.setFontSize(10);
     
     // Host Signature block
-    doc.text('Host Signature:', 20, finalY);
-    doc.text('_________________________', 20, finalY + 10);
+    if (booking.signatureUrl) {
+      doc.text('Host Signature:', 20, finalY);
+      try {
+        doc.addImage(booking.signatureUrl, 'PNG', 20, finalY + 2, 50, 20);
+      } catch (err) {
+        console.error('Error adding host signature image to PDF:', err);
+        doc.text('[Host Signature]', 20, finalY + 10);
+      }
+    } else {
+      doc.text('Host Signature:', 20, finalY);
+      doc.text('_________________________', 20, finalY + 10);
+    }
 
     // Guest Signature block
-    if (booking.signatureUrl) {
+    if (booking.guestSignatureUrl) {
       doc.text('Guest Signature:', 110, finalY);
       try {
-        doc.addImage(booking.signatureUrl, 'PNG', 110, finalY + 2, 50, 20);
+        doc.addImage(booking.guestSignatureUrl, 'PNG', 110, finalY + 2, 50, 20);
       } catch (err) {
-        console.error('Error adding signature image to PDF:', err);
-        doc.text('[Signature Image]', 110, finalY + 10);
+        console.error('Error adding guest signature image to PDF:', err);
+        doc.text('[Guest Signature]', 110, finalY + 10);
       }
     } else {
       doc.text('Guest Signature:', 110, finalY);
@@ -656,21 +666,18 @@ export default function BookingsPage() {
                   {/* Pre/post handover & signatures only for non-Zoomcar */}
                   {booking.source !== 'Zoomcar' && (
                     <>
-                      {booking.signatureUrl ? (
-                        <Link
-                          href={`/sign/${booking.id}`}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-semibold flex items-center gap-1 hover:bg-emerald-900/60"
-                        >
+                      {booking.guestSignatureUrl ? (
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-semibold flex items-center gap-1 hover:bg-emerald-900/60">
                           <PenTool className="w-3.5 h-3.5" />
-                          <span>Signed ✓</span>
-                        </Link>
+                          <span>Guest Signed ✓</span>
+                        </span>
                       ) : (
                         <Link
                           href={`/sign/${booking.id}`}
                           className="px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-400 font-semibold flex items-center gap-1 hover:bg-amber-900/60"
                         >
                           <PenTool className="w-3.5 h-3.5" />
-                          <span>Sign Needed ✍</span>
+                          <span>Guest Sign Needed ✍</span>
                         </Link>
                       )}
                       {booking.preInspection && (
