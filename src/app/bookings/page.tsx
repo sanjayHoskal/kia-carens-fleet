@@ -32,6 +32,7 @@ import {
 import { store } from '@/lib/store';
 import { Booking, BookingSource, PartnerUser } from '@/lib/types';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function BookingsPage() {
   const [currentUser, setCurrentUser] = useState<PartnerUser>('Sanjay P');
@@ -162,18 +163,31 @@ export default function BookingsPage() {
     }
 
     const start = new Date(formData.startDate || Date.now());
+    if (formData.source === 'Private Rental' && formData.startTime) {
+      const [h, m] = formData.startTime.split(':').map(Number);
+      start.setHours(h, m, 0, 0);
+    }
     const end = new Date(formData.endDate || Date.now() + 86400000 * 2);
-    const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+    if (formData.source === 'Private Rental' && formData.endTime) {
+      const [h, m] = formData.endTime.split(':').map(Number);
+      end.setHours(h, m, 0, 0);
+    }
+
+    let diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+    if (formData.source === 'Private Rental' && formData.startTime && formData.endTime) {
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 3600);
+      diffDays = Math.max(0, diffHours / 24);
+    }
 
     let totalAmount = 0;
     let dailyRate = 0;
 
     if (formData.source === 'Zoomcar') {
       totalAmount = Number(formData.totalAmount) || 0;
-      dailyRate = Math.round(totalAmount / diffDays);
+      dailyRate = diffDays > 0 ? Math.round(totalAmount / diffDays) : totalAmount;
     } else {
       dailyRate = Number(formData.dailyRate) || 0;
-      totalAmount = diffDays * dailyRate;
+      totalAmount = Math.round((diffDays * dailyRate) + (Number(formData.carWashCharge) || 0));
     }
 
     store.addBooking({
@@ -237,9 +251,21 @@ export default function BookingsPage() {
 
     const amt = Number(editForm.totalAmount) || 0;
     const start = editForm.startDate ? new Date(editForm.startDate) : new Date(selectedBookingForEdit.startDate);
+    if (editForm.source === 'Private Rental' && editForm.startTime) {
+      const [h, m] = editForm.startTime.split(':').map(Number);
+      start.setHours(h, m, 0, 0);
+    }
     const end = editForm.endDate ? new Date(editForm.endDate) : new Date(selectedBookingForEdit.endDate);
-    const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
-    const dailyRate = Math.round(amt / diffDays);
+    if (editForm.source === 'Private Rental' && editForm.endTime) {
+      const [h, m] = editForm.endTime.split(':').map(Number);
+      end.setHours(h, m, 0, 0);
+    }
+    let diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+    if (editForm.source === 'Private Rental' && editForm.startTime && editForm.endTime) {
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 3600);
+      diffDays = Math.max(0, diffHours / 24);
+    }
+    const dailyRate = diffDays > 0 ? Math.round(amt / diffDays) : amt;
 
     store.updateBooking(selectedBookingForEdit.id, {
       guestName: editForm.guestName,
@@ -264,55 +290,92 @@ export default function BookingsPage() {
   // Generate Agreement PDF
   const generateAgreementPDF = (booking: Booking) => {
     const doc = new jsPDF();
+    
+    // Header
     doc.setFontSize(18);
     doc.text('KIA CARENS (KA09MK6792) RENTAL AGREEMENT', 20, 20);
     
-    doc.setFontSize(11);
-    doc.text(`Booking Reference: ${booking.id}`, 20, 32);
-    doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 20, 38);
-    doc.text(`Lessor / Partners: Sanjay P & Sachin V`, 20, 44);
-
-    doc.line(20, 48, 190, 48);
-
-    doc.setFontSize(13);
-    doc.text('1. Guest Details', 20, 58);
     doc.setFontSize(10);
-    doc.text(`Full Name: ${booking.guestName}`, 25, 66);
-    doc.text(`Mobile Phone: ${booking.guestPhone}`, 25, 72);
-    doc.text(`Aadhaar Number: ${booking.guestAadhaar}`, 25, 78);
-    doc.text(`Driving License: ${booking.guestDl}`, 25, 84);
+    doc.text(`Booking Reference: ${booking.id}`, 20, 28);
+    doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 20, 34);
+    doc.text(`Lessor / Partners: Sanjay P & Sachin V`, 20, 40);
 
-    doc.setFontSize(13);
-    doc.text('2. Rental & Booking Details', 20, 96);
+    // Guest Details Table
+    autoTable(doc, {
+      startY: 45,
+      head: [['Guest Details', '']],
+      body: [
+        ['Full Name', booking.guestName],
+        ['Mobile Phone', booking.guestPhone],
+        ['Aadhaar Number', booking.guestAadhaar],
+        ['Driving License', booking.guestDl],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+    });
+
+    // Rental Details Table
+    const formatDateTime = (dateString: string, timeString?: string) => {
+      const d = new Date(dateString);
+      if (timeString) return `${d.toLocaleDateString()} ${timeString}`;
+      return d.toLocaleString();
+    };
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Rental & Booking Details', '']],
+      body: [
+        ['Vehicle', 'Kia Carens (KA09MK6792)'],
+        ['Source Channel', booking.source],
+        ['Start Date & Time', formatDateTime(booking.startDate, booking.startTime)],
+        ['End Date & Time', formatDateTime(booking.endDate, booking.endTime)],
+        ['Daily Rate', `INR ${booking.dailyRate?.toLocaleString('en-IN') || 0}`],
+        ['Car Wash Charge', `INR ${booking.carWashCharge?.toLocaleString('en-IN') || 0}`],
+        ['Total Agreed Rate', `INR ${booking.totalAmount.toLocaleString('en-IN')}`],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+    });
+
+    // Terms & Conditions Table
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Terms & Conditions']],
+      body: [
+        ['- The vehicle must be driven safely within legal speed limits.'],
+        ['- Excess kilometer charge: INR 15/km beyond standard daily limit.'],
+        ['- Fuel must be returned at the same level as logged during handover.'],
+        ['- Any traffic violations, FASTag tolls, or damages during the trip are guest liability.']
+      ],
+      theme: 'plain',
+      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+      styles: { fontSize: 9, cellPadding: 2 },
+    });
+
+    // Signatures
+    const finalY = (doc as any).lastAutoTable.finalY + 30;
     doc.setFontSize(10);
-    doc.text(`Vehicle: Kia Carens (KA09MK6792)`, 25, 104);
-    doc.text(`Source Channel: ${booking.source}`, 25, 110);
-    doc.text(`Start Date: ${new Date(booking.startDate).toLocaleString()}`, 25, 116);
-    doc.text(`End Date: ${new Date(booking.endDate).toLocaleString()}`, 25, 122);
-    doc.text(`Total Agreed Rate: INR ${booking.totalAmount.toLocaleString('en-IN')}`, 25, 128);
-
-    doc.setFontSize(13);
-    doc.text('3. Terms & Conditions', 20, 140);
-    doc.setFontSize(9);
-    doc.text('- The vehicle must be driven safely within legal speed limits.', 25, 148);
-    doc.text('- Excess kilometer charge: ₹15/km beyond standard daily limit.', 25, 154);
-    doc.text('- Fuel must be returned at the same level as logged during handover.', 25, 160);
-    doc.text('- Any traffic violations, FASTag tolls, or damages during the trip are guest liability.', 25, 166);
-
-    doc.line(20, 180, 190, 180);
-    doc.setFontSize(10);
-    doc.text('Lessor Signature: Sanjay P / Sachin V', 25, 195);
     
+    // Host Signature block
+    doc.text('Host Signature (Optional):', 20, finalY);
+    doc.text('_________________________', 20, finalY + 10);
+    
+    // Guest Signature block
     if (booking.signatureUrl) {
-      doc.text('Guest Digital Signature (Verified):', 110, 188);
+      doc.text('Guest Digital Signature (Verified):', 110, finalY);
       try {
-        doc.addImage(booking.signatureUrl, 'PNG', 110, 190, 50, 20);
+        doc.addImage(booking.signatureUrl, 'PNG', 110, finalY + 2, 50, 20);
       } catch (err) {
         console.error('Error adding signature image to PDF:', err);
-        doc.text('[Signature Image Verified]', 110, 195);
+        doc.text('[Signature Image Verified]', 110, finalY + 10);
       }
     } else {
-      doc.text('Guest Digital Signature: ______________________', 110, 195);
+      doc.text('Guest Signature (Optional):', 110, finalY);
+      doc.text('_________________________', 110, finalY + 10);
     }
 
     doc.save(`Kia_Carens_Rental_Agreement_${booking.guestName.replace(/\s+/g, '_')}.pdf`);
@@ -859,7 +922,7 @@ export default function BookingsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">Trip Start Date *</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="date"
                       required
@@ -879,7 +942,7 @@ export default function BookingsPage() {
                 </div>
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">Trip End Date *</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="date"
                       required
@@ -1070,7 +1133,7 @@ export default function BookingsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">Start Date *</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="date"
                       required
@@ -1090,7 +1153,7 @@ export default function BookingsPage() {
                 </div>
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">End Date *</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="date"
                       required
