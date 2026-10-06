@@ -10,8 +10,10 @@ import {
   PenTool, 
   ShieldCheck, 
   Calendar,
-  UserCheck
+  UserCheck,
+  ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 import { store } from '@/lib/store';
 import { Booking } from '@/lib/types';
 import jsPDF from 'jspdf';
@@ -115,7 +117,7 @@ export default function GuestSignaturePage() {
       setBooking((prev) => prev ? { ...prev, signatureUrl: dataUrl } : null);
     }
 
-    store.addAuditLog('Guest Signed Agreement', `Guest ${booking.guestName} digitally signed rental agreement for ${booking.id}`);
+    store.addAuditLog('Host Signed Agreement', `Host digitally signed rental agreement for ${booking.id}`);
     setSigned(true);
   };
 
@@ -161,15 +163,17 @@ export default function GuestSignaturePage() {
     doc.text('Lessor Signature: Sanjay P / Sachin V', 25, 195);
     
     if (booking.signatureUrl) {
-      doc.text('Guest Digital Signature (Verified):', 110, 188);
+      doc.text('Host Digital Signature (Verified):', 110, 188);
       try {
         doc.addImage(booking.signatureUrl, 'PNG', 110, 190, 50, 20);
       } catch (err) {
         console.error('PDF Signature error:', err);
       }
     } else {
-      doc.text('Guest Digital Signature: ______________________', 110, 195);
+      doc.text('Host Digital Signature: ______________________', 110, 195);
     }
+    
+    doc.text('Guest Signature: ______________________', 25, 220);
 
     doc.save(`Kia_Carens_Rental_Agreement_${booking.guestName.replace(/\s+/g, '_')}.pdf`);
   };
@@ -193,7 +197,7 @@ export default function GuestSignaturePage() {
           <Car className="w-6 h-6" />
         </div>
         <h1 className="text-xl font-bold text-white">Kia Carens (KA09MK6792) Rental Agreement</h1>
-        <p className="text-xs text-slate-400">Digital Document Verification & Guest Signature Portal</p>
+        <p className="text-xs text-slate-400">Digital Document Verification & Host Signature Portal</p>
       </div>
 
       {signed ? (
@@ -203,7 +207,7 @@ export default function GuestSignaturePage() {
           </div>
           <h2 className="text-2xl font-black text-white">Rental Agreement Digitally Signed!</h2>
           <p className="text-xs text-emerald-200 max-w-md mx-auto">
-            Thank you, <strong>{booking.guestName}</strong>. Your rental contract for Kia Carens (KA09MK6792) has been recorded with a verified timestamp. Have a safe & enjoyable journey!
+            The rental contract for Kia Carens (KA09MK6792) has been recorded with a verified timestamp for guest <strong>{booking.guestName}</strong>.
           </p>
 
           {booking.signatureUrl && (
@@ -232,6 +236,13 @@ export default function GuestSignaturePage() {
               <RotateCcw className="w-4 h-4" />
               <span>Re-draw / Update Signature</span>
             </button>
+            <Link
+              href="/bookings"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 flex items-center gap-1.5 ml-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Bookings</span>
+            </Link>
           </div>
         </div>
       ) : (

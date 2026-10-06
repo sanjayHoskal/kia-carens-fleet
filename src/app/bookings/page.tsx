@@ -48,9 +48,12 @@ export default function BookingsPage() {
     guestDl: '',
     source: 'Zoomcar' as BookingSource,
     startDate: '',
+    startTime: '',
     endDate: '',
+    endTime: '',
     dailyRate: '' as number | '',
     totalAmount: '' as number | '',
+    carWashCharge: '' as number | '',
   });
 
   // Edit Booking Modal State
@@ -62,8 +65,11 @@ export default function BookingsPage() {
     guestDl: '',
     source: 'Zoomcar' as BookingSource,
     startDate: '',
+    startTime: '',
     endDate: '',
+    endTime: '',
     totalAmount: '' as number | '',
+    carWashCharge: '' as number | '',
     status: 'Confirmed' as Booking['status'],
   });
 
@@ -178,6 +184,9 @@ export default function BookingsPage() {
       source: formData.source,
       startDate: start.toISOString(),
       endDate: end.toISOString(),
+      startTime: formData.startTime || undefined,
+      endTime: formData.endTime || undefined,
+      carWashCharge: Number(formData.carWashCharge) || 0,
       dailyRate: dailyRate,
       totalAmount: totalAmount,
       status: formData.source === 'Zoomcar' ? 'Completed' : 'Confirmed',
@@ -192,9 +201,12 @@ export default function BookingsPage() {
       guestDl: '',
       source: 'Zoomcar',
       startDate: '',
+      startTime: '',
       endDate: '',
+      endTime: '',
       dailyRate: '',
       totalAmount: '',
+      carWashCharge: '',
     });
     await refreshBookingsAsync();
   };
@@ -209,8 +221,11 @@ export default function BookingsPage() {
       guestDl: booking.guestDl || '',
       source: booking.source,
       startDate: booking.startDate ? booking.startDate.substring(0, 10) : '',
+      startTime: booking.startTime || '',
       endDate: booking.endDate ? booking.endDate.substring(0, 10) : '',
+      endTime: booking.endTime || '',
       totalAmount: booking.totalAmount || '',
+      carWashCharge: booking.carWashCharge || '',
       status: booking.status,
     });
   };
@@ -234,6 +249,9 @@ export default function BookingsPage() {
       source: editForm.source,
       startDate: start.toISOString(),
       endDate: end.toISOString(),
+      startTime: editForm.startTime || undefined,
+      endTime: editForm.endTime || undefined,
+      carWashCharge: Number(editForm.carWashCharge) || 0,
       dailyRate: dailyRate,
       totalAmount: amt,
       status: editForm.status,
@@ -483,15 +501,15 @@ export default function BookingsPage() {
 
           <div className="flex items-center space-x-1.5">
             <span className="text-xs text-slate-400 font-semibold px-1">Channel:</span>
-            {(['all', 'Zoomcar', 'Retail Dealer', 'Private Trip'] as const).map((source) => (
+            {(['all', 'Zoomcar', 'Private Rental', 'Personal trip'] as const).map((source) => (
               <button
                 key={source}
                 onClick={() => setActiveTab(source)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === source
                     ? source === 'Zoomcar' ? 'bg-purple-600 text-white' :
-                      source === 'Retail Dealer' ? 'bg-amber-600 text-white' :
-                      source === 'Private Trip' ? 'bg-sky-600 text-white' :
+                      source === 'Private Rental' ? 'bg-amber-600 text-white' :
+                      source === 'Personal trip' ? 'bg-sky-600 text-white' :
                       'bg-slate-700 text-white'
                     : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
                 }`}
@@ -518,7 +536,7 @@ export default function BookingsPage() {
                 <div className="flex items-center space-x-3">
                   <div className={`p-2.5 rounded-xl text-white font-bold text-xs ${
                     booking.source === 'Zoomcar' ? 'bg-purple-900/60 border border-purple-700 text-purple-300' :
-                    booking.source === 'Retail Dealer' ? 'bg-amber-900/60 border border-amber-700 text-amber-300' :
+                    booking.source === 'Private Rental' ? 'bg-amber-900/60 border border-amber-700 text-amber-300' :
                     'bg-sky-900/60 border border-sky-700 text-sky-300'
                   }`}>
                     {booking.source}
@@ -739,7 +757,7 @@ export default function BookingsPage() {
               <div>
                 <label className="block text-slate-400 mb-1 font-semibold">Booking Source Channel</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['Zoomcar', 'Retail Dealer', 'Private Trip'] as const).map((src) => (
+                  {(['Zoomcar', 'Private Rental', 'Personal trip'] as const).map((src) => (
                     <button
                       type="button"
                       key={src}
@@ -841,23 +859,43 @@ export default function BookingsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">Trip Start Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      required
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                    {formData.source === 'Private Rental' && (
+                      <input
+                        type="time"
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                      />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">Trip End Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      required
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                    {formData.source === 'Private Rental' && (
+                      <input
+                        type="time"
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -881,32 +919,61 @@ export default function BookingsPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-semibold">Daily Rate (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="e.g. 3500"
-                      value={formData.dailyRate === 0 ? '' : formData.dailyRate}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-semibold">Calculated Total (₹)</label>
-                    <div className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-emerald-400 font-mono text-sm font-bold flex items-center justify-between">
-                      <span>₹{(() => {
-                        const s = new Date(formData.startDate || Date.now());
-                        const end = new Date(formData.endDate || Date.now());
-                        const days = Math.max(1, Math.ceil((end.getTime() - s.getTime()) / (1000 * 3600 * 24)));
-                        return (days * (Number(formData.dailyRate) || 0)).toLocaleString('en-IN');
-                      })()}</span>
-                      <span className="text-[10px] text-slate-500 font-normal">Auto-calc</span>
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1 font-semibold">Daily Rate (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 3500"
+                        value={formData.dailyRate === 0 ? '' : formData.dailyRate}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1 font-semibold">Calculated Total (₹)</label>
+                      <div className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-emerald-400 font-mono text-sm font-bold flex items-center justify-between">
+                        <span>₹{(() => {
+                          const s = new Date(formData.startDate || Date.now());
+                          const end = new Date(formData.endDate || Date.now());
+                          let days = Math.max(1, Math.ceil((end.getTime() - s.getTime()) / (1000 * 3600 * 24)));
+                          
+                          // Exact calculation if it's Private Rental
+                          if (formData.source === 'Private Rental' && formData.startTime && formData.endTime) {
+                            const [sHour, sMin] = formData.startTime.split(':').map(Number);
+                            const [eHour, eMin] = formData.endTime.split(':').map(Number);
+                            const startFull = new Date(s);
+                            startFull.setHours(sHour, sMin, 0);
+                            const endFull = new Date(end);
+                            endFull.setHours(eHour, eMin, 0);
+                            const diffHours = (endFull.getTime() - startFull.getTime()) / (1000 * 3600);
+                            days = Math.max(0, diffHours / 24);
+                          }
+                          
+                          const carWash = Number(formData.carWashCharge) || 0;
+                          return ((days * (Number(formData.dailyRate) || 0)) + carWash).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                        })()}</span>
+                        <span className="text-[10px] text-slate-500 font-normal">Auto-calc</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1 font-semibold">Car Wash Charge (₹) (Optional)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 500"
+                        value={formData.carWashCharge === 0 ? '' : formData.carWashCharge}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setFormData({ ...formData, carWashCharge: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
@@ -1003,23 +1070,43 @@ export default function BookingsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">Start Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={editForm.startDate}
-                    onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      required
+                      value={editForm.startDate}
+                      onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                    {editForm.source === 'Private Rental' && (
+                      <input
+                        type="time"
+                        value={editForm.startTime}
+                        onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                      />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-slate-400 mb-1 font-semibold">End Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={editForm.endDate}
-                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      required
+                      value={editForm.endDate}
+                      onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    />
+                    {editForm.source === 'Private Rental' && (
+                      <input
+                        type="time"
+                        value={editForm.endTime}
+                        onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1052,6 +1139,22 @@ export default function BookingsPage() {
                   </select>
                 </div>
               </div>
+              
+              {editForm.source !== 'Zoomcar' && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Car Wash Charge (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 500"
+                      value={editForm.carWashCharge === 0 ? '' : editForm.carWashCharge}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setEditForm({ ...editForm, carWashCharge: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-slate-800 flex justify-end space-x-2">
                 <button

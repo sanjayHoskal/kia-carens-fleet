@@ -452,7 +452,7 @@ export default function Dashboard() {
                       <span className="font-semibold text-slate-100 text-sm">{b.guestName}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         b.source === 'Zoomcar' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                        b.source === 'Retail Dealer' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                        b.source === 'Private Rental' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
                         'bg-sky-950 text-sky-300 border border-sky-800'
                       }`}>
                         {b.source}

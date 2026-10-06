@@ -1,6 +1,6 @@
 export type PartnerUser = 'Sanjay P' | 'Sachin V' | 'Sachin' | 'Admin';
 
-export type BookingSource = 'Zoomcar' | 'Retail Dealer' | 'Private Trip';
+export type BookingSource = 'Zoomcar' | 'Private Rental' | 'Personal trip';
 
 export type BookingStatus = 
   | 'Confirmed' 
@@ -54,6 +54,9 @@ export interface Booking {
   dailyRate: number;
   totalAmount: number;
   status: BookingStatus;
+  startTime?: string;
+  endTime?: string;
+  carWashCharge?: number;
   signatureUrl?: string;
   signedAgreementUrl?: string;
   preInspection?: PreHandoverInspection;

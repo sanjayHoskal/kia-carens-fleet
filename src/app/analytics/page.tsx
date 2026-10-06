@@ -52,8 +52,8 @@ export default function AnalyticsPage() {
 
   // Compute revenue by source
   const zoomcarRevenue = bookings.filter(b => b.source === 'Zoomcar' && b.status !== 'Cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
-  const dealerRevenue = bookings.filter(b => b.source === 'Retail Dealer' && b.status !== 'Cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
-  const privateRevenue = bookings.filter(b => b.source === 'Private Trip' && b.status !== 'Cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
+  const dealerRevenue = bookings.filter(b => b.source === 'Private Rental' && b.status !== 'Cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
+  const privateRevenue = bookings.filter(b => b.source === 'Personal trip' && b.status !== 'Cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
 
   const totalRevenue = zoomcarRevenue + dealerRevenue + privateRevenue;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -84,8 +84,8 @@ export default function AnalyticsPage() {
       [''],
       ['REVENUE BY SOURCE', 'AMOUNT (INR)'],
       ['Zoomcar Fleet Revenue', zoomcarRevenue],
-      ['Retail Dealer Revenue', dealerRevenue],
-      ['Private Trip Revenue', privateRevenue],
+      ['Private Rental Revenue', dealerRevenue],
+      ['Personal trip Revenue', privateRevenue],
       ['TOTAL REVENUE', totalRevenue],
       [''],
       ['EXPENSES & FIXED ALLOCATIONS', 'AMOUNT (INR)'],
@@ -124,8 +124,8 @@ export default function AnalyticsPage() {
     doc.text('1. Revenue Summary by Source', 20, 42);
     doc.setFontSize(10);
     doc.text(`Zoomcar Channel: INR ${zoomcarRevenue.toLocaleString('en-IN')}`, 25, 50);
-    doc.text(`Retail Dealer Channel: INR ${dealerRevenue.toLocaleString('en-IN')}`, 25, 56);
-    doc.text(`Private Trip Channel: INR ${privateRevenue.toLocaleString('en-IN')}`, 25, 62);
+    doc.text(`Private Rental Channel: INR ${dealerRevenue.toLocaleString('en-IN')}`, 25, 56);
+    doc.text(`Personal trip Channel: INR ${privateRevenue.toLocaleString('en-IN')}`, 25, 62);
     doc.setFontSize(11);
     doc.text(`Total Gross Revenue: INR ${totalRevenue.toLocaleString('en-IN')}`, 25, 70);
 
@@ -256,10 +256,10 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Retail Dealer */}
+          {/* Private Rental */}
           <div>
             <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-amber-300">Retail Dealer Rentals</span>
+              <span className="text-amber-300">Private Rental</span>
               <span className="text-slate-200">₹{dealerRevenue.toLocaleString('en-IN')}</span>
             </div>
             <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden">
@@ -270,10 +270,10 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Private Trip */}
+          {/* Personal trip */}
           <div>
             <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-sky-300">Private Direct Trips</span>
+              <span className="text-sky-300">Personal trip</span>
               <span className="text-slate-200">₹{privateRevenue.toLocaleString('en-IN')}</span>
             </div>
             <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden">
