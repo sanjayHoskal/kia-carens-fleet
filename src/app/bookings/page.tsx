@@ -360,23 +360,23 @@ export default function BookingsPage() {
     const finalY = (doc as any).lastAutoTable.finalY + 30;
     doc.setFontSize(10);
     
-    // Host Signature block
-    doc.text('Host Signature (Optional):', 20, finalY);
-    doc.text('_________________________', 20, finalY + 10);
-    
     // Guest Signature block
     if (booking.signatureUrl) {
-      doc.text('Guest Digital Signature (Verified):', 110, finalY);
+      doc.text('Guest Signature:', 20, finalY);
       try {
-        doc.addImage(booking.signatureUrl, 'PNG', 110, finalY + 2, 50, 20);
+        doc.addImage(booking.signatureUrl, 'PNG', 20, finalY + 2, 50, 20);
       } catch (err) {
         console.error('Error adding signature image to PDF:', err);
-        doc.text('[Signature Image Verified]', 110, finalY + 10);
+        doc.text('[Signature Image]', 20, finalY + 10);
       }
     } else {
-      doc.text('Guest Signature (Optional):', 110, finalY);
-      doc.text('_________________________', 110, finalY + 10);
+      doc.text('Guest Signature:', 20, finalY);
+      doc.text('_________________________', 20, finalY + 10);
     }
+
+    // Host Signature block
+    doc.text('Host Signature:', 110, finalY);
+    doc.text('_________________________', 110, finalY + 10);
 
     doc.save(`Kia_Carens_Rental_Agreement_${booking.guestName.replace(/\s+/g, '_')}.pdf`);
   };
